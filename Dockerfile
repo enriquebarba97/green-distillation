@@ -35,6 +35,7 @@ RUN pip3 install --upgrade setuptools
 RUN pip3 install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1
 
 RUN pip3 install transformers==4.52.4 datasets==3.6.0 accelerate==1.7.0
+RUN pip3 install scikit-learn==1.6.1 pyDOE==0.3.8 pymoo==0.6.1.5 numba==0.60.0
 
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility

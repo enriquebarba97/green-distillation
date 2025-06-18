@@ -88,16 +88,17 @@ def train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloa
         if dev_acc > dev_best_acc:
             dev_best_acc = dev_acc
 
-            if not surrogate:
-                output_dir = os.path.join("../checkpoints", "Morph")
-                os.makedirs(output_dir, exist_ok=True)
-                model_path = os.path.join(output_dir, weights_file)
+            save_path = os.path.join("../checkpoints", "surrogate", weights_file) if surrogate else os.path.join("../checkpoints", "final", weights_file)
 
-                if os.path.exists(model_path):
-                    os.remove(model_path)
+            output_dir = os.path.join("../checkpoints", "Morph")
+            os.makedirs(output_dir, exist_ok=True)
+            model_path = os.path.join(output_dir, weights_file)
 
-                torch.save(model.state_dict(), model_path)
-                logger.info("New best model found and saved.")
+            if os.path.exists(model_path):
+                os.remove(model_path)
+
+            torch.save(model.state_dict(), model_path)
+            logger.info("New best model found and saved.")
 
         logger.info("Epoch [{}]: Train Loss: {:.4f}, Val ROUGE-L: {:.4f}".format(
             epoch + 1,
@@ -404,10 +405,9 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
     eval_data_file = "../data/valid_sampled.txt"
     test_data_file = "../data/test_sampled.txt"
     if surrogate:
-        epochs = 5
+        epochs = 10
     else:
         epochs = 20
-    n_labels = 2
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
     set_seed(seed)
@@ -442,8 +442,8 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
     #     print("Generated Tokens:", preds.sequences)
     #     print("Logits:", len(preds.scores))
 
-    prediction_flips = []
-    dev_best_accs = []
+    dev_best_rouges = []
+    sizes = []
     for hyperparams in hyperparams_set:
         print(hyperparams)
         num_layers, hidden_act, num_decoder_layers, d_model, num_heads, d_kv, d_ff, relative_attention_num_buckets, relative_attention_max_distance, dropout_rate, feed_forward_proj, learning_rate, batch_size = hyperparams_convert_codet5(
@@ -479,9 +479,15 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
 
             model.to(device)
 
-            dev_best_acc, pred_original = train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloader, epochs, learning_rate, device,
+            total_params = sum(p.numel() for p in model.parameters())
+            logger.info(f"{total_params:,} total parameters.")
+            size = abs(total_params * 4 / 1e6)
+            logger.info(f"{size} MB model size")
+            sizes.append(size)
+
+            dev_best_rouge, pred_original = train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloader, epochs, learning_rate, device,
                                                 surrogate, weights_file=weights_file)
-            dev_best_accs.append(dev_best_acc)
+            dev_best_rouges.append(dev_best_rouge)
 
             #eval_dataset2 = DistilledDataset(tokenizer_type, vocab_size, eval_data_file, max_sequence_length, logger,
             #                                  metamorphic_file)
@@ -489,9 +495,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             #eval_dataloader2 = DataLoader(eval_dataset2, sampler=eval_sampler2, batch_size=batch_size * 2,
             #                              num_workers=8,
             #                              pin_memory=True)
-            meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
-            prediction_flips.append(np.sum(pred_original != pred_metamorphic))
-
+#            meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
         else:
             model_dir = os.path.join("../checkpoints", "Morph", weights_file)
             model.load_state_dict(torch.load(model_dir, map_location=device))
@@ -522,9 +526,9 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
                                                                                             test_results[
                                                                                                 "inference_time"]))
             prediction_flips.append(np.sum(prediction != pred_metamorphic))
-            dev_best_accs.append(test_results["eval_acc"])
-    return
-    return dev_best_accs, prediction_flips
+            dev_best_rouges.append(test_results["eval_acc"])
+
+    return dev_best_rouges, size
 
 def load_teacher_model(model_name, device):
     teacher = AutoModelForSeq2SeqLM.from_pretrained(model_name)

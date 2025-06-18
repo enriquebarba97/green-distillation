@@ -1,6 +1,6 @@
 import csv
 
-from mo_distill_utils import distill, hyperparams_convert, distill_codet5
+from mo_distill_utils import distill, hyperparams_convert, distill_codet5, hyperparams_convert_codet5
 from flops import TransformerHparams
 from many_objective import convert_chromosomes, MyRepair, ModelCompressionProblem, \
     LatinHypercubeSampler
@@ -44,35 +44,38 @@ def main_codet5():
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
     lb = [1, 1, 1, 16, 1, 1, 16, 1, 1, 0.1, 1, 1, 1]
-    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
+#    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
+    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
+
 
     # Number of points to generate
-    n_points = 20
+    n_points = 80
 
     problem = ModelCompressionProblem(lb, ub, None)
     sampler = LatinHypercubeSampler()
 
-    surrogate_data = convert_chromosomes(sampler._do(problem, 20))
+    surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
 
     # trains the models
-    accs, prediction_flips = distill_codet5(surrogate_data, eval=False, surrogate=True)
-    return
+    rouges, sizes = distill_codet5(surrogate_data, eval=False, surrogate=True)
+    
     print("Create surrogate models")
 
     with open("surrogate_data_metamorphic.csv", "w") as f:
         writer = csv.writer(f)
         writer.writerow(
-            ["Num Hidden Layers", "Num Decoder Layers", "Hidden Size", "Num Attention Heads", "Projection Size",
-             "Intermediate Size", "Attention Buckets", "Attention Distance", "Dropout Rate", "Feed Forward Tipe"])
-        for i in range(0, len(accs)):
-            model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
-                                       surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
-            size = abs(model.get_params() * 4 / 1e6)
+            ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+             "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+             "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+             "Learning Rate", "Batch Size", "Model Size", "Rouge Score"])
+        for i in range(0, len(rouges)):
+            # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
+            #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
+            # size = abs(model.get_params() * 4 / 1e6)
 
-            row_data = hyperparams_convert(surrogate_data[i])
-            row_data += [size]
-            row_data += [accs[i]]
-            row_data += [prediction_flips[i]]
+            row_data = hyperparams_convert_codet5(surrogate_data[i])
+            row_data += [sizes[i]]
+            row_data += [rouges[i]]
             writer.writerow(row_data)
 
 
