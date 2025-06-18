@@ -67,7 +67,7 @@ def main_codet5():
     for i in range(0, len(surrogate_data)):
 
     # trains the models
-        rouges, sizes = distill_codet5(surrogate_data[i], eval=False, surrogate=True)
+        rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True)
 
         with open("surrogate_data_metamorphic.csv", "a") as f:
             writer = csv.writer(f)
