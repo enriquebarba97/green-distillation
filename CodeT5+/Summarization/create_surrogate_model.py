@@ -51,31 +51,33 @@ def main_codet5():
     # Number of points to generate
     n_points = 80
 
-    problem = ModelCompressionProblem(lb, ub, None)
-    sampler = LatinHypercubeSampler()
-
-    surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
-
-    # trains the models
-    rouges, sizes = distill_codet5(surrogate_data, eval=False, surrogate=True)
-    
-    print("Create surrogate models")
-
-    with open("surrogate_data_metamorphic.csv", "w") as f:
+    with open("surrogate_data_metamorphic.csv", "a") as f:
         writer = csv.writer(f)
         writer.writerow(
             ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
              "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
              "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
              "Learning Rate", "Batch Size", "Model Size", "Rouge Score"])
-        for i in range(0, len(rouges)):
+
+    problem = ModelCompressionProblem(lb, ub, None)
+    sampler = LatinHypercubeSampler()
+
+    surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
+    
+    for i in range(0, len(surrogate_data)):
+
+    # trains the models
+        rouges, sizes = distill_codet5(surrogate_data[i], eval=False, surrogate=True)
+
+        with open("surrogate_data_metamorphic.csv", "a") as f:
+            writer = csv.writer(f)
             # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
             #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
             # size = abs(model.get_params() * 4 / 1e6)
 
             row_data = hyperparams_convert_codet5(surrogate_data[i])
-            row_data += [sizes[i]]
-            row_data += [rouges[i]]
+            row_data += [sizes[0]]
+            row_data += [rouges[0]]
             writer.writerow(row_data)
 
 
