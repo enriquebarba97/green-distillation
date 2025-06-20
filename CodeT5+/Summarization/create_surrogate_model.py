@@ -1,5 +1,4 @@
 import csv
-
 from mo_distill_utils import distill, hyperparams_convert, distill_codet5, hyperparams_convert_codet5
 from flops import TransformerHparams
 from many_objective import convert_chromosomes, MyRepair, ModelCompressionProblem, \
@@ -40,7 +39,7 @@ def main_roberta():
             row_data += [prediction_flips[i]]
             writer.writerow(row_data)
 
-def main_codet5():
+def main_codet5(start_from=0):
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
     lb = [1, 1, 1, 16, 1, 1, 16, 1, 1, 0.1, 1, 1, 1]
@@ -48,39 +47,44 @@ def main_codet5():
 #    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
 
 
+    if start_from == 0:
     # Number of points to generate
-    n_points = 80
+        n_points = 80
 
-    with open("surrogate_data_metamorphic.csv", "a") as f:
-        writer = csv.writer(f)
-        writer.writerow(
-            ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
-             "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
-             "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
-             "Learning Rate", "Batch Size", "Model Size", "Rouge Score"])
+        with open("surrogate_data.csv", "a") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+                "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+                "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+                "Learning Rate", "Batch Size", "Model Size", "Rouge Score"])
 
-    problem = ModelCompressionProblem(lb, ub, None)
-    sampler = LatinHypercubeSampler()
+        problem = ModelCompressionProblem(lb, ub, None)
+        sampler = LatinHypercubeSampler()
 
-    surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
+        surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
 
-    with open("surrogate_data_metamorphic-sampling.csv", "w") as f:
-        writer = csv.writer(f)
-        writer.writerow(
-            ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
-             "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
-             "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
-             "Learning Rate", "Batch Size"])
-        for i in range(0, len(surrogate_data)):
-            row_data = hyperparams_convert_codet5(surrogate_data[i])
-            writer.writerow(row_data)
+        with open("surrogate_data_sampling.csv", "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+                "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+                "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+                "Learning Rate", "Batch Size"])
+            for i in range(0, len(surrogate_data)):
+                row_data = hyperparams_convert_codet5(surrogate_data[i])
+                writer.writerow(row_data)
+    else:
+        with open("surrogate_data_sampling.csv", "r") as f:
+            reader = csv.reader(f)
+            surrogate_data = list(reader)[1:]
 
     for i in range(0, len(surrogate_data)):
 
     # trains the models
         rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
 
-        with open("surrogate_data_metamorphic.csv", "a") as f:
+        with open("surrogate_data.csv", "a") as f:
             writer = csv.writer(f)
             # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
             #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
@@ -93,4 +97,4 @@ def main_codet5():
 
 
 if __name__ == "__main__":
-    main_codet5()
+    main_codet5(start_from=2)
