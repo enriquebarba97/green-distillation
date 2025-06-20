@@ -581,6 +581,28 @@ def hyperparams_convert_codet5(hyperparams):
         batch_size[hyperparams[12]]
     ]
 
+def hyperparams_convert_back_codet5(hyperparams):
+    hidden_act = {"gelu": 1, "relu": 2, "silu": 3, "gelu_new": 4}
+    feed_forward_proj = {"relu": 1, "gated-gelu": 2}
+    learning_rate = {1e-3: 1, 1e-4: 2, 5e-5: 3}
+    batch_size = {8: 1, 16: 2}
+
+    return [
+        hyperparams[0],
+        hidden_act[hyperparams[1]],
+        hyperparams[2],
+        hyperparams[3],
+        hyperparams[4],
+        hyperparams[5],
+        hyperparams[6],
+        hyperparams[7],
+        hyperparams[8],
+        hyperparams[9],
+        feed_forward_proj[hyperparams[10]],
+        learning_rate[hyperparams[11]],
+        batch_size[hyperparams[12]]
+    ]
+
 
 if __name__ == "__main__":
     print(hyperparams_convert([1, 27505, 1, 24, 3, 0.2, 1508, 2, 0.1, 512, 1, 2, 2]))

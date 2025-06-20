@@ -1,5 +1,5 @@
 import csv
-from mo_distill_utils import distill, hyperparams_convert, distill_codet5, hyperparams_convert_codet5
+from mo_distill_utils import distill, hyperparams_convert, distill_codet5, hyperparams_convert_codet5, hyperparams_convert_back_codet5
 from flops import TransformerHparams
 from many_objective import convert_chromosomes, MyRepair, ModelCompressionProblem, \
     LatinHypercubeSampler
@@ -78,6 +78,7 @@ def main_codet5(start_from=0):
         with open("surrogate_data_sampling.csv", "r") as f:
             reader = csv.reader(f)
             surrogate_data = list(reader)[1:]
+        surrogate_data = [hyperparams_convert_back_codet5(row) for row in surrogate_data]
 
     for i in range(0, len(surrogate_data)):
 
