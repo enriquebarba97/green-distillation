@@ -607,3 +607,4 @@ def hyperparams_convert_back_codet5(hyperparams):
 if __name__ == "__main__":
     #print(hyperparams_convert([1, 27505, 1, 24, 3, 0.2, 1508, 2, 0.1, 512, 1, 2, 2]))
     #distill([[1, 27505, 3, 36, 3, 0.3, 1508, 12, 0.2, 358, 1, 2, 2]], eval=True, surrogate=False)
+    pass
