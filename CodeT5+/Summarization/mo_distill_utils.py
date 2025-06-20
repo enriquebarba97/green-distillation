@@ -600,7 +600,7 @@ def hyperparams_convert_back_codet5(hyperparams):
         float(hyperparams[9]),
         feed_forward_proj[str(hyperparams[10])],
         learning_rate[float(hyperparams[11])],
-        batch_size[hyperparams[12]]
+        batch_size[int(hyperparams[12])]
     ]
 
 
