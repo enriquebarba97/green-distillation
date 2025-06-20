@@ -588,22 +588,22 @@ def hyperparams_convert_back_codet5(hyperparams):
     batch_size = {8: 1, 16: 2}
 
     return [
-        hyperparams[0],
-        hidden_act[hyperparams[1]],
-        hyperparams[2],
-        hyperparams[3],
-        hyperparams[4],
-        hyperparams[5],
-        hyperparams[6],
-        hyperparams[7],
-        hyperparams[8],
-        hyperparams[9],
-        feed_forward_proj[hyperparams[10]],
-        learning_rate[hyperparams[11]],
+        int(hyperparams[0]),
+        hidden_act[str(hyperparams[1])],
+        int(hyperparams[2]),
+        int(hyperparams[3]),
+        int(hyperparams[4]),
+        int(hyperparams[5]),
+        int(hyperparams[6]),
+        int(hyperparams[7]),
+        int(hyperparams[8]),
+        float(hyperparams[9]),
+        feed_forward_proj[str(hyperparams[10])],
+        learning_rate[float(hyperparams[11])],
         batch_size[hyperparams[12]]
     ]
 
 
 if __name__ == "__main__":
-    print(hyperparams_convert([1, 27505, 1, 24, 3, 0.2, 1508, 2, 0.1, 512, 1, 2, 2]))
-    distill([[1, 27505, 3, 36, 3, 0.3, 1508, 12, 0.2, 358, 1, 2, 2]], eval=True, surrogate=False)
+    #print(hyperparams_convert([1, 27505, 1, 24, 3, 0.2, 1508, 2, 0.1, 512, 1, 2, 2]))
+    #distill([[1, 27505, 3, 36, 3, 0.3, 1508, 12, 0.2, 358, 1, 2, 2]], eval=True, surrogate=False)
