@@ -80,7 +80,7 @@ def main_codet5(start_from=0):
             surrogate_data = list(reader)[1:]
         surrogate_data = [hyperparams_convert_back_codet5(row) for row in surrogate_data]
 
-    for i in range(0, len(surrogate_data)):
+    for i in range(start_from, len(surrogate_data)):
 
     # trains the models
         rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
