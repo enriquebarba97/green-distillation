@@ -44,8 +44,8 @@ def main_codet5():
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
     lb = [1, 1, 1, 16, 1, 1, 16, 1, 1, 0.1, 1, 1, 1]
-#    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
-    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
+    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
+#    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
 
 
     # Number of points to generate
@@ -63,11 +63,22 @@ def main_codet5():
     sampler = LatinHypercubeSampler()
 
     surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
-    
+
+    with open("surrogate_data_metamorphic-sampling.csv", "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(
+            ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+             "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+             "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+             "Learning Rate", "Batch Size"])
+        for i in range(0, len(surrogate_data)):
+            row_data = hyperparams_convert_codet5(surrogate_data[i])
+            writer.writerow(row_data)
+
     for i in range(0, len(surrogate_data)):
 
     # trains the models
-        rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True)
+        rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
 
         with open("surrogate_data_metamorphic.csv", "a") as f:
             writer = csv.writer(f)

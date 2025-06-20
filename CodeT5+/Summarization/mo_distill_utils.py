@@ -488,7 +488,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             dev_best_rouge, pred_original = train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloader, epochs, learning_rate, device,
                                                 surrogate, weights_file=weights_file)
             dev_best_rouges.append(dev_best_rouge)
-
+            del model, teacher_model, train_dataloader, eval_dataloader, train_dataset, eval_dataset
             #eval_dataset2 = DistilledDataset(tokenizer_type, vocab_size, eval_data_file, max_sequence_length, logger,
             #                                  metamorphic_file)
             #eval_sampler2 = SequentialSampler(eval_dataset2)
@@ -528,7 +528,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             prediction_flips.append(np.sum(prediction != pred_metamorphic))
             dev_best_rouges.append(test_results["eval_acc"])
 
-    return dev_best_rouges, size
+    return dev_best_rouges, sizes
 
 def load_teacher_model(model_name, device):
     teacher = AutoModelForSeq2SeqLM.from_pretrained(model_name)
