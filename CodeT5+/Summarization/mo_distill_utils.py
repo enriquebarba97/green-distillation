@@ -465,14 +465,14 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
         model = T5ForConditionalGeneration(config=config)
 
         if not eval:
-            train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000)
+            train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000, path="../data/train")
 
             # Create a DataLoader for the combined dataset
             train_sampler = RandomSampler(train_dataset)
             train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=batch_size,
                                           num_workers=8, pin_memory=True)
 
-            eval_dataset = OnlineDistilledDataset(split="validation", tokenizer=tokenizer, n_samples=2000)
+            eval_dataset = OnlineDistilledDataset(split="validation", tokenizer=tokenizer, n_samples=2000, path="../data/valid")
             eval_sampler = SequentialSampler(eval_dataset)
             eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=batch_size * 2, num_workers=8,
                                          pin_memory=True)
