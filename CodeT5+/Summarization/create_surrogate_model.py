@@ -42,7 +42,7 @@ def main_roberta():
 def main_codet5(start_from=0):
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
-    lb = [1, 1, 1, 16, 1, 1, 16, 1, 1, 0.1, 1, 1, 1]
+    lb = [1, 1, 1, 16, 1, 1, 16, 4, 32, 0.1, 1, 1, 1]
     ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
 #    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
 
@@ -98,4 +98,4 @@ def main_codet5(start_from=0):
 
 
 if __name__ == "__main__":
-    main_codet5(start_from=2)
+    main_codet5(start_from=0)
