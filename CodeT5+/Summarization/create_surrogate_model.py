@@ -1,3 +1,4 @@
+import argparse
 import csv
 from mo_distill_utils import distill, hyperparams_convert, distill_codet5, hyperparams_convert_codet5, hyperparams_convert_back_codet5
 from flops import TransformerHparams
@@ -39,7 +40,7 @@ def main_roberta():
             row_data += [prediction_flips[i]]
             writer.writerow(row_data)
 
-def main_codet5(start_from=0):
+def main_codet5(start_from=0, single=False):
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
     lb = [1, 1, 1, 16, 1, 1, 16, 4, 32, 0.1, 1, 1, 1]
@@ -80,22 +81,45 @@ def main_codet5(start_from=0):
             surrogate_data = list(reader)[1:]
         surrogate_data = [hyperparams_convert_back_codet5(row) for row in surrogate_data]
 
-    for i in range(start_from, len(surrogate_data)):
-
-    # trains the models
-        rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
+    if single:
+        
+        rouges, sizes = distill_codet5([surrogate_data[start_from]], eval=False, surrogate=True, weights_file=f"model-{start_from}.bin")
 
         with open("surrogate_data.csv", "a") as f:
-            writer = csv.writer(f)
-            # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
-            #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
-            # size = abs(model.get_params() * 4 / 1e6)
+                writer = csv.writer(f)
+                # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
+                #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
+                # size = abs(model.get_params() * 4 / 1e6)
 
-            row_data = hyperparams_convert_codet5(surrogate_data[i])
-            row_data += [sizes[0]]
-            row_data += [rouges[0]]
-            writer.writerow(row_data)
+                row_data = hyperparams_convert_codet5(surrogate_data[start_from])
+                row_data += [sizes[0]]
+                row_data += [rouges[0]]
+                row_data += [start_from]
+                writer.writerow(row_data)
+
+    else:
+        for i in range(start_from, len(surrogate_data)):
+
+        # trains the models
+            rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
+
+            with open("surrogate_data.csv", "a") as f:
+                writer = csv.writer(f)
+                # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
+                #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
+                # size = abs(model.get_params() * 4 / 1e6)
+
+                row_data = hyperparams_convert_codet5(surrogate_data[i])
+                row_data += [sizes[0]]
+                row_data += [rouges[0]]
+                row_data += [i]
+                writer.writerow(row_data)
 
 
 if __name__ == "__main__":
-    main_codet5(start_from=0)
+    parser = argparse.ArgumentParser(description="Create surrogate models for CodeT5")
+    parser.add_argument("--start_from", type=int, default=0, help="Start from the given index in surrogate data sampling")
+    parser.add_argument("--single", action='store_true', help="Run single model creation instead of batch")
+
+    args = parser.parse_args()
+    main_codet5(args.start_from, args.single)
