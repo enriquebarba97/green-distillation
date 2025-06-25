@@ -47,6 +47,8 @@ def main_codet5(start_from=0, end_at=80, single=False):
     ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
 #    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
 
+    print("Start from:", start_from, "End at:", end_at)
+
 
     if start_from == 0:
     # Number of points to generate
@@ -123,4 +125,4 @@ if __name__ == "__main__":
     parser.add_argument("--single", action='store_true', help="Run single model creation instead of batch")
 
     args = parser.parse_args()
-    main_codet5(args.start_from, args.single)
+    main_codet5(args.start_from, args.end_at, args.single)
