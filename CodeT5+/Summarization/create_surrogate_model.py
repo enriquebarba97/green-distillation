@@ -119,7 +119,7 @@ def main_codet5(start_from=0, end_at=80, single=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create surrogate models for CodeT5")
     parser.add_argument("--start-from", type=int, default=0, help="Start from the given index in surrogate data sampling")
-    parser.add_argument("end-at", type=int, default=80, help="End at the given index in surrogate data sampling")
+    parser.add_argument("--end-at", type=int, default=80, help="End at the given index in surrogate data sampling")
     parser.add_argument("--single", action='store_true', help="Run single model creation instead of batch")
 
     args = parser.parse_args()
