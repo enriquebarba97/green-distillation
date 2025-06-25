@@ -40,7 +40,7 @@ def main_roberta():
             row_data += [prediction_flips[i]]
             writer.writerow(row_data)
 
-def main_codet5(start_from=0, single=False):
+def main_codet5(start_from=0, end_at=80, single=False):
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
     lb = [1, 1, 1, 16, 1, 1, 16, 4, 32, 0.1, 1, 1, 1]
@@ -98,7 +98,7 @@ def main_codet5(start_from=0, single=False):
                 writer.writerow(row_data)
 
     else:
-        for i in range(start_from, len(surrogate_data)):
+        for i in range(start_from, end_at):
 
         # trains the models
             rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
@@ -118,7 +118,8 @@ def main_codet5(start_from=0, single=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create surrogate models for CodeT5")
-    parser.add_argument("--start_from", type=int, default=0, help="Start from the given index in surrogate data sampling")
+    parser.add_argument("--start-from", type=int, default=0, help="Start from the given index in surrogate data sampling")
+    parser.add_argument("end-at", type=int, default=80, help="End at the given index in surrogate data sampling")
     parser.add_argument("--single", action='store_true', help="Run single model creation instead of batch")
 
     args = parser.parse_args()
