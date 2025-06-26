@@ -34,7 +34,7 @@ def train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloa
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_steps * 0.1,
                                                 num_training_steps=num_steps)
 
-    dev_best_acc = 0
+    dev_best_acc = -1
     dev_best_flips = float("inf")  # Initialize to a large number
     best_pred = []
 
