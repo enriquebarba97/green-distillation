@@ -5,7 +5,7 @@ import csv
 import argparse
 import time
 
-from mo_distill_utils import distill_codet5
+from mo_distill_utils import distill_codet5, hyperparams_convert_back_codet5
 
 def main():
     parser = argparse.ArgumentParser(description="Train and evaluate MORPH models.")
@@ -22,6 +22,8 @@ def main():
 
     hyperparameters = hyperparams_data[:, :hyperparams_data.shape[1] - 2]
     objectives = hyperparams_data[:, hyperparams_data.shape[1] - 2:]
+
+    hyperparameters = [hyperparams_convert_back_codet5(row) for row in hyperparameters]
 
     hyperparams = hyperparameters[model_number]
     objs = objectives[model_number]
