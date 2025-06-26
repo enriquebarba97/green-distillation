@@ -506,7 +506,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=batch_size * 2, num_workers=8,
                                          pin_memory=True)
 
-            test_results = evaluate(model, device, test_dataloader)
+            test_results = evaluate(model, device, test_dataloader, tokenizer)
 
             print("Test Acc: {0}, Test Precision: {1}, Test Recall: {2}, Test F1: {3}".format(
                 test_results["rouge_l"],
