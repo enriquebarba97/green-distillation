@@ -497,35 +497,20 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             #                              pin_memory=True)
 #            meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
         else:
-            model_dir = os.path.join("../checkpoints", "Morph", weights_file)
+            model_dir = os.path.join("../checkpoints", "surrogate", weights_file)
             model.load_state_dict(torch.load(model_dir, map_location=device))
             model.to(device)
 
-            test_dataset = DistilledDataset(tokenizer_type, vocab_size, test_data_file, max_sequence_length, logger,
-                                            data_file)
+            test_dataset = OnlineDistilledDataset(split="test", tokenizer=tokenizer, n_samples=10000, path="../data/test")
             test_sampler = SequentialSampler(test_dataset)
             test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=batch_size * 2, num_workers=8,
                                          pin_memory=True)
 
-            test_results, prediction = evaluate(model, device, test_dataloader)
+            test_results = evaluate(model, device, test_dataloader)
 
-            meta_test_dataset = DistilledDataset(tokenizer_type, vocab_size, test_data_file, max_sequence_length,
-                                                 logger,
-                                                 metamorphic_file)
-            meta_test_sampler = SequentialSampler(meta_test_dataset)
-            meta_test_dataloader = DataLoader(meta_test_dataset, sampler=meta_test_sampler, batch_size=batch_size * 2,
-                                              num_workers=8,
-                                              pin_memory=True)
-            meta_results, pred_metamorphic = evaluate(model, device, meta_test_dataloader)
-            logger.info(
-                "Test Acc: {0}, Test Precision: {1}, Test Recall: {2}, Test F1: {3}".format(test_results["eval_acc"],
-                                                                                            test_results[
-                                                                                                "eval_precision"],
-                                                                                            test_results["eval_recall"],
-                                                                                            test_results["eval_f1"],
-                                                                                            test_results[
-                                                                                                "inference_time"]))
-            prediction_flips.append(np.sum(prediction != pred_metamorphic))
+            print("Test Acc: {0}, Test Precision: {1}, Test Recall: {2}, Test F1: {3}".format(
+                test_results["rouge_l"],
+                test_results["inference_time"]))
             dev_best_rouges.append(test_results["eval_acc"])
 
     return dev_best_rouges, sizes
