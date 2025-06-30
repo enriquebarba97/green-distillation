@@ -21,30 +21,34 @@ SOFTMAX_FLOPS = 5
 class TransformerHparams(object):
     """Computes the train/inference FLOPs for transformers."""
 
-    def __init__(self, h=768, l=12, s=514, v=50265, i=3072, heads=12):
+    def __init__(self, h=768, l=12, s=514, v=50265, i=3072, heads=12, head_size=None, output_frac=0.15625, sparse_embed_lookup=False, decoder=False):
         self.h = h  # hidden size
         self.l = l  # number of layers
-        self.s = s * 2  # sequence length, clone detection needs a double sequence length
+        self.s = s  # sequence length, clone detection needs a double sequence length
         self.v = v  # vocab size
         self.e = h  # embedding size
         self.i = h * 4 if i is None else i  # intermediate size
-        self.kqv = h
+        self.kqv = h if head_size is None else head_size * heads
         self.heads = heads
+        self.output_frac = output_frac
+        self.sparse_embed_lookup = sparse_embed_lookup  # whether to use sparse embedding lookup
+        self.decoder = decoder  # whether this is a decoder transformer
 
     def get_block_flops(self):
+        attn_mult = 2 if self.decoder else 1
         block_flops = dict(
-            kqv=3 * 2 * self.h * self.kqv,
-            kqv_bias=3 * self.kqv,
-            attention_scores=2 * self.kqv * self.s,
-            attn_softmax=SOFTMAX_FLOPS * self.s * self.heads,
-            attention_dropout=DROPOUT_FLOPS * self.s * self.heads,
-            attention_scale=self.s * self.heads,
-            attention_weighted_avg_values=2 * self.h * self.s,
-            attn_output=2 * self.h * self.h,
-            attn_output_bias=self.h,
-            attn_output_dropout=DROPOUT_FLOPS * self.h,
-            attn_output_residual=self.h,
-            attn_output_layer_norm=LAYER_NORM_FLOPS,
+            kqv=3 * 2 * self.h * self.kqv * attn_mult,
+            kqv_bias=3 * self.kqv * attn_mult,
+            attention_scores=2 * self.kqv * self.s * attn_mult,
+            attn_softmax=SOFTMAX_FLOPS * self.s * self.heads * attn_mult,
+            attention_dropout=DROPOUT_FLOPS * self.s * self.heads * attn_mult,
+            attention_scale=self.s * self.heads * attn_mult,
+            attention_weighted_avg_values=2 * self.h * self.s * attn_mult,
+            attn_output=2 * self.h * self.h * attn_mult,
+            attn_output_bias=self.h * attn_mult,
+            attn_output_dropout=DROPOUT_FLOPS * self.h * attn_mult,
+            attn_output_residual=self.h * attn_mult,
+            attn_output_layer_norm=LAYER_NORM_FLOPS * attn_mult,
             intermediate=2 * self.h * self.i,
             intermediate_act=ACTIVATION_FLOPS * self.i,
             intermediate_bias=self.i,
@@ -56,18 +60,34 @@ class TransformerHparams(object):
         )
         return sum(block_flops.values()) * self.s
 
-    def get_embedding_flops(self):
+    def get_embedding_flops(self, output=False):
         """Get the forward-pass FLOPs the transformer inputs or output softmax."""
         embedding_flops = {}
-        embedding_flops["main_multiply"] = 2 * self.e * self.v
-
-        embedding_flops.update(dict(
-            tok_type_and_position=2 * self.e * (self.s + 2),
-            add_tok_type_and_position=2 * self.e,
-            emb_layer_norm=LAYER_NORM_FLOPS * self.e,
-            emb_dropout=DROPOUT_FLOPS * self.e
-        ))
-
+        if output or (not self.sparse_embed_lookup):
+            embedding_flops["main_multiply"] = 2 * self.e * self.v
+        # input embedding post-processing
+        if not output:
+            embedding_flops.update(dict(
+                tok_type_and_position=2 * self.e * (self.s + 2),
+                add_tok_type_and_position=2 * self.e,
+                emb_layer_norm=LAYER_NORM_FLOPS * self.e,
+                emb_dropout=DROPOUT_FLOPS * self.e
+            ))
+        # projection layer if e != h
+        if self.e != self.h or output:
+            embedding_flops.update(dict(
+                hidden_kernel=2 * self.h * self.e,
+                hidden_bias=self.e if output else self.h
+            ))
+        # extra hidden layer and output softmax
+            if output:
+                embedding_flops.update(dict(
+                    hidden_activation=ACTIVATION_FLOPS * self.e,
+                    hidden_layernorm=LAYER_NORM_FLOPS * self.e,
+                    output_softmax=SOFTMAX_FLOPS * self.v,
+                    output_target_word=2 * self.v
+                ))
+                return self.output_frac * sum(embedding_flops.values()) * self.s
         return sum(embedding_flops.values()) * self.s
 
     def get_binary_classification_flops(self):
@@ -77,6 +97,15 @@ class TransformerHparams(object):
             hidden_act=DROPOUT_FLOPS * self.h + ACTIVATION_FLOPS * self.h,
             logits=2 * self.h
             # soft_logits=2 * SOFTMAX_FLOPS
+        )
+        return sum(classification_flops.values()) * self.s
+    
+    def get_generation_flops(self):
+        generation_flops = dict(
+            hidden=2 * self.h * self.h,
+            hidden_bias=self.h,
+            hidden_act=DROPOUT_FLOPS * self.h + ACTIVATION_FLOPS * self.h,
+            logits=self.v * self.h
         )
         return sum(classification_flops.values()) * self.s
 
@@ -134,6 +163,23 @@ class TransformerHparams(object):
         return sum(block_params.values()) * self.l #+ sum(classification_params.values())
 
 
+class EncoderDecoderHparams(object):
+    """Computes the train/inference FLOPs for encoder-decoder transformers."""
+
+    def __init__(self, h=768, l_encoder=12, l_decoder=12, s=514, v=50265, i=3072, heads=12, head_size=None, gen_len=128):
+        self.encoder = TransformerHparams(h, l_encoder, s=s, v=v, i=i, heads=heads, head_size=head_size, output_frac=0)
+        self.decoder = TransformerHparams(h, l_decoder, s=s, v=v, i=i, heads=heads, head_size=head_size, decoder=True, output_frac=1)
+        self.gen_len = gen_len  # generation length
+    
+    def get_params(self):
+        return self.encoder.get_params() + self.decoder.get_params()
+
+    def get_infer_flops(self):
+        encoder_flops = self.encoder.get_embedding_flops() + self.encoder.l * self.encoder.get_block_flops()
+        decoder_flops = self.decoder.get_embedding_flops() + self.decoder.get_embedding_flops(output=True) + self.decoder.l * self.decoder.get_block_flops()
+
+        return encoder_flops + decoder_flops * self.gen_len
+
 MODEL_FLOPS = collections.OrderedDict([
     ("roberta", [TransformerHparams().get_infer_flops(),
      TransformerHparams().get_params()])
@@ -159,6 +205,13 @@ def main():
     flops = model.get_infer_flops()
     params = model.get_params()
     print(flops/1e9)
+
+
+    model = EncoderDecoderHparams(483, 5, 11, 256, 50265, 1596, 7, 19)
+    flops = model.get_infer_flops()
+    params = model.get_params()
+    print(flops/1e9)
+    print(params*4/1e6)  # in MB
 
 if __name__ == "__main__":
     main()
