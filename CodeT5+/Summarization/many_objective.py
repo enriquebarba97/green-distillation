@@ -21,9 +21,10 @@ from pymoo.optimize import minimize
 from pymoo.termination import get_termination
 from pymoo.util.ref_dirs import get_reference_directions
 
-from mo_distill_utils import distill
-from flops import TransformerHparams
+from mo_distill_utils import distill, distill_codet5
+from flops import TransformerHparams, EncoderDecoderHparams
 from mo_surrogate import SurrogateModel
+from mo_distill_utils import hyperparams_convert_codet5, hyperparams_convert_back_codet5
 from utils import set_seed
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -102,13 +103,13 @@ def convert_chromosomes(population):
 class ModelCompressionProblem(Problem):
 
     def __init__(self, lower_bounds, upper_bounds, surrogate_model: SurrogateModel):
-        super().__init__(n_var=len(lower_bounds), n_obj=4, n_ieq_constr=0, xl=lower_bounds, xu=upper_bounds)
+        super().__init__(n_var=len(lower_bounds), n_obj=3, n_ieq_constr=0, xl=lower_bounds, xu=upper_bounds)
         self.generation = 0
         self.surrogate_model = surrogate_model
 
     def _evaluate(self, population, out, *args, **kwargs):
         # Initialize an array to hold the objective values for each solution in X
-        F = np.zeros((len(population), 4))  # For 4 objectives
+        F = np.zeros((len(population), 3))  # For 4 objectives
 
         # Open the file for appending outside the loop to avoid opening and closing it multiple times
         with open("generation_data.csv", "a", newline='') as f:
@@ -118,14 +119,17 @@ class ModelCompressionProblem(Problem):
 
             for idx in range(0, len(population)):
                 candidate_values = population[idx]
-                model = TransformerHparams(candidate_values[3], candidate_values[2], candidate_values[9],
-                                           candidate_values[1], candidate_values[6], candidate_values[7])
+
+                model = EncoderDecoderHparams(candidate_values[3], candidate_values[0], candidate_values[2],
+                                              320, 32000, candidate_values[6], candidate_values[4], candidate_values[5], 128)
+
                 size = model.get_params() * 4 / 1e6
                 flops = model.get_infer_flops() / 1e9
                 accuracy = self.surrogate_model.predict_accuracy([candidate_values])[0]
-                n_flips = self.surrogate_model.predict_number_of_flip([candidate_values])[0]
+                gpu_energy = self.surrogate_model.predict_gpu_energy([candidate_values])[0]
+                cpu_energy = self.surrogate_model.predict_cpu_energy([candidate_values])[0]
 
-                F[idx, :] = [size, -accuracy, n_flips, flops]
+                F[idx, :] = [size, -accuracy, gpu_energy + cpu_energy]
 
                 # Write data for each individual immediately after evaluation
                 writer.writerow([self.generation, candidate_values.tolist(), F[idx, 0], F[idx, 1], F[idx, 2]])
@@ -134,48 +138,6 @@ class ModelCompressionProblem(Problem):
         out["F"] = F.reshape(-1, 1)
 
         self.generation += 1  # Increment generation counter
-
-class SuperCompressionProblem(Problem):
-
-    def __init__(self, lower_bounds, upper_bounds, surrogate_model: SurrogateModel):
-        super().__init__(n_var=len(lower_bounds), n_obj=4, n_ieq_constr=1, xl=lower_bounds, xu=upper_bounds)
-        self.generation = 0
-        self.surrogate_model = surrogate_model
-
-    def _evaluate(self, population, out, *args, **kwargs):
-        # Initialize an array to hold the objective values for each solution in X
-        F = np.zeros((len(population), 4))  # For 4 objectives
-        G = np.zeros((len(population), 1))  # For 1 constraint
-
-        # Open the file for appending outside the loop to avoid opening and closing it multiple times
-        with open("generation_data.csv", "a", newline='') as f:
-            writer = csv.writer(f)
-            if self.generation == 0:  # Write headers only once
-                writer.writerow(["Generation", "Chromosome", "Objective 1", "Objective 2", "Objective 3"])
-
-            for idx in range(0, len(population)):
-                candidate_values = population[idx]
-                model = TransformerHparams(candidate_values[3], candidate_values[2], candidate_values[9],
-                                           candidate_values[1], candidate_values[6], candidate_values[7])
-                size = model.get_params() * 4 / 1e6
-                flops = model.get_infer_flops() / 1e9
-                accuracy = self.surrogate_model.predict_accuracy([candidate_values])[0]
-                n_flips = self.surrogate_model.predict_number_of_flip([candidate_values])[0]
-
-                F[idx, :] = [size, accuracy, n_flips, flops]
-
-                # Constraint: Accuracy should be greater than 0.7
-                G[idx, 0] = 0.7 - accuracy
-
-                # Write data for each individual immediately after evaluation
-                writer.writerow([self.generation, candidate_values.tolist(), F[idx, 0], F[idx, 1], F[idx, 2]])
-
-        # Reshape for compatibility with pymoo's expected output format
-        out["F"] = F.reshape(-1, 1)
-        out["G"] = G.reshape(-1, 1)  # Add constraints to the output
-
-        self.generation += 1  # Increment generation counter
-
 
 class LatinHypercubeSampler(Sampling):
     def _do(self, search_problem: Problem, n_samples, **kwargs):
@@ -271,28 +233,29 @@ class MyRepairCodeT5(Repair):
         return X
 
 
-if __name__ == "__main__":
+def main():
     start_time = time.time()
-    lb = [1, 1000, 1, 16, 1, 0.2, 32, 1, 0.2, 256, 1, 2, 1]
-    ub = [4, 46000, 12, 256, 4, 0.5, 3072, 12, 0.5, 512, 3, 3, 2]
+    lb = [1, 1, 1, 16, 1, 1, 16, 4, 32, 0.1, 1, 1, 1]
+    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
 
     logging.info("Initializing initial population")
 
     # Read the CSV file into a DataFrame
-    df = pd.read_csv("surrogate_data_metamorphic.csv")
+    df = pd.read_csv("surrogate_data_energy.csv")
+    
 
     # Apply the conversion function to each row, excluding the last column
-    df.iloc[:, :-2] = df.iloc[:, :-2].apply(lambda row: hyperparams_convert_back(row.tolist()), axis=1,
+    df.iloc[:, :-11] = df.iloc[:, :-11].apply(lambda row: hyperparams_convert_back_codet5(row.tolist()), axis=1,
                                             result_type='expand')
-    features = df.iloc[:, :-2].values
-    accs = df['Accuracy'].tolist()
-    features2 = df.iloc[:, -1].values
-    flips = df['Prediction Flips'].tolist()
+    features = df.iloc[:, :-11].values
+    accs = df['Rouge Score'].tolist()
+    gpu_energy = df['evaluation_median_gpu_energy'].tolist()
+    cpu_energy = df['evaluation_median_cpu_energy'].tolist()
 
     surrogate_model = SurrogateModel()
-    surrogate_model.fit([features, accs, flips])
+    surrogate_model.fit([features, accs, gpu_energy, cpu_energy])
 
-    problem = SuperCompressionProblem(lb, ub, surrogate_model)
+    problem = ModelCompressionProblem(lb, ub, surrogate_model)
 
     # set the seed for replicability
     seed = 2
@@ -303,7 +266,7 @@ if __name__ == "__main__":
                       selection=TournamentSelection(func_comp=binary_tournament),
                       crossover=SBX(eta=15, prob=0.9),
                       mutation=PolynomialMutation(eta=30),
-                      repair=MyRepair(),
+                      repair=MyRepairCodeT5(),
                       )
 
     res = minimize(problem,
@@ -360,24 +323,30 @@ if __name__ == "__main__":
     #         writer.writerow(row_data)
 
     logging.info("Pareto front \n : {}".format(res.F))
+    
+    # # Extract the first objective
+    # first_objective = res.F[:, 0]
 
-    # Extract the first objective
-    first_objective = res.F[:, 2]
+    # # Calculate the absolute difference from 3
+    # difference_from_3 = np.abs(first_objective - 3)
 
-    # Calculate the absolute difference from 3
-    difference_from_3 = np.abs(first_objective - 3)
+    # # Find the index of the minimum difference
+    # closest_index = np.argmin(difference_from_3)
 
-    # Find the index of the minimum difference
-    closest_index = np.argmin(difference_from_3)
+    # # Retrieve the solution with the first objective closest to 3
+    # closest_solution = res.X[closest_index, :]
+    # print("solution = ", closest_solution)
 
-    # Retrieve the solution with the first objective closest to 3
-    closest_solution = res.X[closest_index, :]
-    print("solution = ", closest_solution)
-    objs = problem.evaluate(res.X[closest_index, :])[0]
+    # Retrieve solution with highest second objective
+    max_accuracy_index = np.argmin(res.F[:, 1])
+    solution = res.X[max_accuracy_index, :]
+    print("solution = ", solution)
+
+    objs = problem.evaluate(res.X[max_accuracy_index, :])
     logging.info("Objs : {}".format(objs))
-    converted_sol = convert_chromosomes([closest_solution])
-    accs, prediction_flips = distill(converted_sol, eval=False, surrogate=False, seed=seed)
-    accs, prediction_flips = distill(converted_sol, eval=True, surrogate=False, seed=seed)
+    converted_sol = convert_chromosomes([solution])
+    accs, prediction_flips = distill_codet5(converted_sol, eval=False, surrogate=False, seed=seed)
+    accs, prediction_flips = distill_codet5(converted_sol, eval=True, surrogate=False, seed=seed)
     logging.info("Prediction flips : {}".format(res.F[closest_index, 3]))
 
     # results_file = "results_morph.csv"
@@ -437,3 +406,6 @@ if __name__ == "__main__":
     #             res.F[index, 3]
     #         ]
     #         writer.writerow(row_data)
+
+if __name__ == "__main__":
+    main()

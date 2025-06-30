@@ -90,8 +90,7 @@ def train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloa
 
             save_path = os.path.join("../checkpoints", "surrogate", weights_file) if surrogate else os.path.join("../checkpoints", "final", weights_file)
 
-            output_dir = os.path.join("../checkpoints", "Morph")
-            os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(save_path, exist_ok=True)
             model_path = os.path.join(output_dir, weights_file)
 
             if os.path.exists(model_path):
@@ -497,7 +496,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             #                              pin_memory=True)
 #            meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
         else:
-            model_dir = os.path.join("../checkpoints", "surrogate", weights_file)
+            model_dir = os.path.join("../checkpoints", "final", weights_file)
             model.load_state_dict(torch.load(model_dir, map_location=device))
             model.to(device)
 

@@ -40,27 +40,17 @@ def main_roberta():
             row_data += [prediction_flips[i]]
             writer.writerow(row_data)
 
-def main_codet5(start_from=0, end_at=80, single=False):
+def main_codet5(start_from=0, end_at=80, single=False, generate_points=False):
     # Define the lower and upper bounds
     # We use default values as upper bounds since they are smaller than 220m
     lb = [1, 1, 1, 16, 1, 1, 16, 4, 32, 0.1, 1, 1, 1]
-    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
-#    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
+#    ub = [6, 4, 6, 512, 8, 64, 2048, 32, 128, 0.5, 2, 3, 2]
+    ub = [12, 4, 12, 768, 12, 64, 3072, 32, 128, 0.3, 2, 3, 2]
 
     print("Start from:", start_from, "End at:", end_at)
 
-
-    if start_from == 0:
-    # Number of points to generate
+    if generate_points:
         n_points = 80
-
-        with open("surrogate_data.csv", "a") as f:
-            writer = csv.writer(f)
-            writer.writerow(
-                ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
-                "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
-                "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
-                "Learning Rate", "Batch Size", "Model Size", "Rouge Score"])
 
         problem = ModelCompressionProblem(lb, ub, None)
         sampler = LatinHypercubeSampler()
@@ -77,17 +67,30 @@ def main_codet5(start_from=0, end_at=80, single=False):
             for i in range(0, len(surrogate_data)):
                 row_data = hyperparams_convert_codet5(surrogate_data[i])
                 writer.writerow(row_data)
-    else:
-        with open("surrogate_data_sampling.csv", "r") as f:
-            reader = csv.reader(f)
-            surrogate_data = list(reader)[1:]
-        surrogate_data = [hyperparams_convert_back_codet5(row) for row in surrogate_data]
+        
+        return
+
+    if start_from == 0:
+    # Number of points to generate
+
+        with open("surrogate_data_large.csv", "a") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+                "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+                "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+                "Learning Rate", "Batch Size", "Model Size", "Rouge Score", "Index"])
+            
+    with open("surrogate_data_sampling_large.csv", "r") as f:
+        reader = csv.reader(f)
+        surrogate_data = list(reader)[1:]
+    surrogate_data = [hyperparams_convert_back_codet5(row) for row in surrogate_data]
 
     if single:
         
         rouges, sizes = distill_codet5([surrogate_data[start_from]], eval=False, surrogate=True, weights_file=f"model-{start_from}.bin")
 
-        with open("surrogate_data.csv", "a") as f:
+        with open("surrogate_data_large.csv", "a") as f:
                 writer = csv.writer(f)
                 # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
                 #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
@@ -105,7 +108,7 @@ def main_codet5(start_from=0, end_at=80, single=False):
         # trains the models
             rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
 
-            with open("surrogate_data.csv", "a") as f:
+            with open("surrogate_data_large.csv", "a") as f:
                 writer = csv.writer(f)
                 # model = TransformerHparams(surrogate_data[i][3], surrogate_data[i][2], surrogate_data[i][9],
                 #                            surrogate_data[i][1], surrogate_data[i][6], surrogate_data[i][7])
@@ -126,3 +129,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main_codet5(args.start_from, args.end_at, args.single)
+    #main_codet5(generate_points=True)
