@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from models import Model, distill_loss, distillation_loss_new, distillation_loss_generation, DistillationLoss
 from utils import set_seed, DistilledDataset, OnlineDistilledDataset
+from weight_subcloning import WeightCloner
 from sklearn.metrics import recall_score, precision_score, f1_score
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler, ConcatDataset
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup, RobertaConfig, RobertaModel, T5Config, T5ForConditionalGeneration, T5Model, AutoModelForSeq2SeqLM
@@ -407,39 +408,15 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
         epochs = 10
     else:
         epochs = 20
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-
+    #device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     set_seed(seed)
 
     tokenizer = AutoTokenizer.from_pretrained("Salesforce/codet5p-220m")
-
     teacher_model = load_teacher_model("teacher_model/", device)
+    train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000, path="../data/train")
 
-    # Teacher inference test
-    # dataset = OnlineDistilledDataset(split="train")
-
-    # Teacher inference test
-    # with torch.no_grad():
-    #     input_ids, attention_mask, labels, source, target = dataset[0]
-        
-    #     input_ids = input_ids.unsqueeze(0).to(device)
-    #     attention_mask = attention_mask.unsqueeze(0).to(device)
-    #     labels = labels.unsqueeze(0).to(device)
-
-    #     decoder_input_ids = torch.tensor([[teacher_model.config.decoder_start_token_id]], device=input_ids.device)
-
-    #     print("Labels:", labels)
-    #     output = teacher_model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-    #     #print(output.logits)
-
-    #     # Get tokens from the output logits
-    #     logits = output.logits
-    #     predicted_tokens = torch.argmax(logits, dim=-1)
-    #     print("Predicted Tokens:", predicted_tokens)
-
-    #     preds = teacher_model.generate(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids, output_scores=True, return_dict_in_generate=True)
-    #     print("Generated Tokens:", preds.sequences)
-    #     print("Logits:", len(preds.scores))
+    cloner = WeightCloner(teacher_model, train_dataset, tokenizer)
 
     dev_best_rouges = []
     sizes = []
@@ -464,7 +441,8 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
         model = T5ForConditionalGeneration(config=config)
 
         if not eval:
-            train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000, path="../data/train")
+
+            model = cloner.clone_weights(model)
 
             # Create a DataLoader for the combined dataset
             train_sampler = RandomSampler(train_dataset)
