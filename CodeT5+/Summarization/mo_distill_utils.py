@@ -89,10 +89,11 @@ def train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloa
         if dev_acc > dev_best_acc:
             dev_best_acc = dev_acc
 
-            save_path = os.path.join("../checkpoints", "surrogate", weights_file) if surrogate else os.path.join("../checkpoints", "final", weights_file)
+            save_path = os.path.join("../checkpoints", "surrogate") if surrogate else os.path.join("../checkpoints", "final")
 
             os.makedirs(save_path, exist_ok=True)
-            model_path = os.path.join(output_dir, weights_file)
+        
+            model_path = os.path.join(save_path, weights_file)
 
             if os.path.exists(model_path):
                 os.remove(model_path)
