@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 from utils import OnlineDistilledDataset
 
-def collect_activations(model, dataset, tokenizer, batch_size=16, max_tokens=80000, input_length=320, output_length=128):
+def collect_activations(model, dataset, tokenizer, device, batch_size=16, max_tokens=80000, input_length=320, output_length=128):
     hooks = []
     activations_encoder = {
         'resid': {},
@@ -178,8 +178,8 @@ def collect_activations(model, dataset, tokenizer, batch_size=16, max_tokens=800
                 # Process in batches
                 if len(batch_texts) >= batch_size:
                     
-                    inputs = tokenizer(batch_texts, return_tensors='pt', padding="max_length", truncation=True, max_length=320)
-                    labels = tokenizer(batch_labels, return_tensors='pt', padding="max_length", truncation=True, max_length=128)
+                    inputs = tokenizer(batch_texts, return_tensors='pt', padding="max_length", truncation=True, max_length=input_length).to(device)
+                    labels = tokenizer(batch_labels, return_tensors='pt', padding="max_length", truncation=True, max_length=input_length).to(device)
                     total_tokens += inputs['input_ids'].numel()
                     
                     progress.update(inputs['input_ids'].numel())
@@ -418,9 +418,9 @@ def subclone_model(base_model, new_model, activations_encoder, activations_decod
     return new_model
 
 class WeightCloner:
-    def __init__(self, teacher_model, dataset: OnlineDistilledDataset, tokenizer):
+    def __init__(self, teacher_model, dataset: OnlineDistilledDataset, tokenizer, device):
         self.teacher_model = teacher_model
-        self.activations_encoder, self.activations_decoder, self.activations_shared = collect_activations(self.teacher_model, dataset, tokenizer)
+        self.activations_encoder, self.activations_decoder, self.activations_shared = collect_activations(self.teacher_model, dataset, tokenizer, device)
 
     def clone_weights(self, student_model):
         """

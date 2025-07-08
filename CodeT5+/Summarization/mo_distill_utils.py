@@ -416,7 +416,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
     teacher_model = load_teacher_model("teacher_model/", device)
     train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000, path="../data/train")
 
-    cloner = WeightCloner(teacher_model, train_dataset, tokenizer)
+    cloner = WeightCloner(teacher_model, train_dataset, tokenizer, device)
 
     dev_best_rouges = []
     sizes = []
