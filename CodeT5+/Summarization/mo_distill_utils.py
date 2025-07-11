@@ -414,10 +414,6 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
     set_seed(seed)
 
     tokenizer = AutoTokenizer.from_pretrained("Salesforce/codet5p-220m")
-    teacher_model = load_teacher_model("teacher_model/", device)
-    train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000, path="../data/train")
-
-    cloner = WeightCloner(teacher_model, train_dataset, tokenizer, device)
 
     dev_best_rouges = []
     sizes = []
@@ -443,6 +439,10 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
 
         if not eval:
 
+            teacher_model = load_teacher_model("teacher_model/", device)
+            train_dataset = OnlineDistilledDataset(split="train", tokenizer=tokenizer, n_samples=100000, path="../data/train")
+            cloner = WeightCloner(teacher_model, train_dataset, tokenizer, device)
+            
             model = cloner.clone_weights(model)
 
             # Create a DataLoader for the combined dataset
@@ -487,9 +487,10 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
 
             test_results = evaluate(model, device, test_dataloader, tokenizer)
 
-            print("Test Acc: {0}, Test Precision: {1}, Test Recall: {2}, Test F1: {3}".format(
+            print("Test Acc: {0}, Inference time: {1}".format(
                 test_results["rouge_l"],
                 test_results["inference_time"]))
+            
             dev_best_rouges.append(test_results["eval_acc"])
 
     return dev_best_rouges, sizes
