@@ -475,7 +475,8 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             #                              pin_memory=True)
 #            meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
         else:
-            model_dir = os.path.join("../checkpoints", "final", weights_file)
+            input_dir = "surrogate" if surrogate else "final"
+            model_dir = os.path.join("../checkpoints", input_dir, weights_file)
             model.load_state_dict(torch.load(model_dir, map_location=device))
             model.to(device)
 
