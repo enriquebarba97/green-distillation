@@ -491,7 +491,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
                 test_results["rouge_l"],
                 test_results["inference_time"]))
             
-            dev_best_rouges.append(test_results["eval_acc"])
+            dev_best_rouges.append(test_results["rouge_l"])
 
     return dev_best_rouges, sizes
 
