@@ -3,7 +3,7 @@
 VALUES=80
 
 # Number of repetitions for each value
-REPETITIONS=15
+REPETITIONS=30
 
 # Initialize an associative array to track counts
 declare -A COUNTS

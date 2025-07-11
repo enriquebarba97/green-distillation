@@ -18,7 +18,7 @@ def main():
     seed = 2
 
     # Load Pareto front data and convert to array
-    hyperparams_data = pd.read_csv('surrogate_data.csv').to_numpy()
+    hyperparams_data = pd.read_csv('surrogate_data_large.csv').to_numpy()
 
     hyperparameters = hyperparams_data[:, :hyperparams_data.shape[1] - 2]
     objectives = hyperparams_data[:, hyperparams_data.shape[1] - 2:]
@@ -28,7 +28,7 @@ def main():
     hyperparams = hyperparameters[model_number]
     objs = objectives[model_number]
 
-    eval_rounds = 5
+    eval_rounds = 10
     for i in range(eval_rounds):
         accs, _ = distill_codet5([hyperparams], eval=True, surrogate=True, seed=seed, weights_file=f"model-{model_number}.bin")
 

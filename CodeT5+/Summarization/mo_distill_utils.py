@@ -479,7 +479,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             model.load_state_dict(torch.load(model_dir, map_location=device))
             model.to(device)
 
-            test_dataset = OnlineDistilledDataset(split="test", tokenizer=tokenizer, n_samples=10000, path="../data/test")
+            test_dataset = OnlineDistilledDataset(split="test", tokenizer=tokenizer, n_samples=15000, path="../data/test")
             test_sampler = SequentialSampler(test_dataset)
             test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=batch_size * 2, num_workers=8,
                                          pin_memory=True)
