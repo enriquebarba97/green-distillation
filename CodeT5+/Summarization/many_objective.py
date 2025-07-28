@@ -127,9 +127,9 @@ class ModelCompressionProblem(Problem):
                 flops = model.get_infer_flops() / 1e9
                 accuracy = self.surrogate_model.predict_accuracy([candidate_values])[0]
                 gpu_energy = self.surrogate_model.predict_gpu_energy([candidate_values])[0]
-                cpu_energy = self.surrogate_model.predict_cpu_energy([candidate_values])[0]
+                #cpu_energy = self.surrogate_model.predict_cpu_energy([candidate_values])[0]
 
-                F[idx, :] = [size, -accuracy, gpu_energy + cpu_energy]
+                F[idx, :] = [size, -accuracy, gpu_energy]
 
                 # Write data for each individual immediately after evaluation
                 writer.writerow([self.generation, candidate_values.tolist(), F[idx, 0], F[idx, 1], F[idx, 2]])
@@ -216,10 +216,10 @@ class MyRepairCodeT5(Repair):
             individual[3] = int(individual[3])
             individual[4] = int(individual[4])
             if individual[3] % individual[4] != 0:
-                # Adjust individual[3] to the closest value that is divisible by individual[7]
+                # Adjust individual[3] to the closest value that is divisible by individual[4]
                 # There are two possible closest values:
-                # 1. Next multiple of individual[7]
-                # 2. Previous multiple of individual[7]
+                # 1. Next multiple of individual[4]
+                # 2. Previous multiple of individual[4]
 
                 next_multiple = (individual[3] // individual[4] + 1) * individual[4]
                 prev_multiple = (individual[3] // individual[4]) * individual[4]
@@ -243,6 +243,9 @@ def main():
     # Read the CSV file into a DataFrame
     df = pd.read_csv("surrogate_data_energy.csv")
     
+    # Remove column called Index if it exists
+    if 'Index' in df.columns:
+        df = df.drop(columns=['Index'])
 
     # Apply the conversion function to each row, excluding the last column
     df.iloc[:, :-11] = df.iloc[:, :-11].apply(lambda row: hyperparams_convert_back_codet5(row.tolist()), axis=1,
@@ -279,48 +282,48 @@ def main():
     logging.info("Number of solutions in the archive: {}".format(len(res.F)))
     logging.info("Saving the archive to the file")
 
-    fieldnames = [
-        "Tokenizer", "Vocab Size", "Num Hidden Layers", "Hidden Size", "Hidden Act", "Hidden Dropout Prob",
-        "Intermediate Size", "Num Attention Heads", "Attention Probs Dropout Prob", "Max Sequence Length",
-        "Position Embedding Type", "Learning Rate", "Batch Size", "Size", "Accuracy", "FLOPS", "Flips"
-    ]
+    print_pareto = True
+    if print_pareto:
+        fieldnames = ["Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+                    "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+                    "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+                    "Learning Rate", "Batch Size", "Model Size", "Rouge Score", "GPU Energy"]
 
-    # results_file = "new_pareto.csv"
-    # with open(results_file, 'a', newline='') as file:
-    #     writer = csv.DictWriter(file, fieldnames=fieldnames)
-    #     # Write the header only if the file is empty
-    #     if file.tell() == 0:
-    #         writer.writeheader()
+        results_file = "new_pareto.csv"
+        with open(results_file, 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            # Write the header only if the file is empty
+            if file.tell() == 0:
+                writer.writeheader()
 
-    #     for index in range(0, len(res.F)):
-    #         x = res.X[index, :]
-    #         objs = problem.evaluate(res.X[index, :])[0]
-    #         converted_sol = convert_chromosomes([x])
+            for index in range(0, len(res.F)):
+                x = res.X[index, :]
+                objs = problem.evaluate(res.X[index, :])
+                converted_sol = convert_chromosomes([x])
 
 
-    #     # Create a dictionary from row data
-    #         row_data = {
-    #             "Tokenizer": converted_sol[0][0],
-    #             "Vocab Size": converted_sol[0][1],
-    #             "Num Hidden Layers": converted_sol[0][2],
-    #             "Hidden Size": converted_sol[0][3],
-    #             "Hidden Act": converted_sol[0][4],
-    #             "Hidden Dropout Prob": converted_sol[0][5],
-    #             "Intermediate Size": converted_sol[0][6],
-    #             "Num Attention Heads": converted_sol[0][7],
-    #             "Attention Probs Dropout Prob": converted_sol[0][8],
-    #             "Max Sequence Length": converted_sol[0][9],
-    #             "Position Embedding Type": converted_sol[0][10],
-    #             "Learning Rate": converted_sol[0][11],
-    #             "Batch Size": converted_sol[0][12],
-    #             "Size": objs[0],  # Assuming objs[0] is the Size
-    #             "Accuracy": objs[1],  # Assuming accs contains accuracy values
-    #             "FLOPS": objs[3],  # Assuming objs[3] is the FLOPS
-    #             "Flips": res.F[index, 2]  # Assuming prediction_flips contains the flips value
-    #         }
+            # Create a dictionary from row data
+                row_data = {
+                    "Num Hidden Layers": converted_sol[0][0],
+                    "Hidden Activation": converted_sol[0][1],
+                    "Number Decoder Layers": converted_sol[0][2],
+                    "Hidden Size": converted_sol[0][3],
+                    "Num Attention Heads": converted_sol[0][4],
+                    "Projection Size": converted_sol[0][5],
+                    "Intermediate Size": converted_sol[0][6],
+                    "Relative Attention Buckets": converted_sol[0][7],
+                    "Relative Attention Max Distance": converted_sol[0][8],
+                    "Dropout Rate": converted_sol[0][9],
+                    "Feed Forward Projection": converted_sol[0][10],
+                    "Learning Rate": converted_sol[0][11],
+                    "Batch Size": converted_sol[0][12],
+                    "Model Size": objs[0],  # Assuming objs[0] is the Size
+                    "Rouge Score": -objs[1],  # Assuming accs contains accuracy values
+                    "GPU Energy": objs[2],  # Assuming objs[2] is the FLOPS
+                }
 
-    #     # Write the row data to the CSV file
-    #         writer.writerow(row_data)
+            # Write the row data to the CSV file
+                writer.writerow(row_data)
 
     logging.info("Pareto front \n : {}".format(res.F))
     
@@ -338,16 +341,36 @@ def main():
     # print("solution = ", closest_solution)
 
     # Retrieve solution with highest second objective
-    max_accuracy_index = np.argmin(res.F[:, 1])
-    solution = res.X[max_accuracy_index, :]
-    print("solution = ", solution)
+    # max_accuracy_index = np.argmin(res.F[:, 1])
+    # solution = res.X[max_accuracy_index, :]
+    # print("solution = ", solution)
 
-    objs = problem.evaluate(res.X[max_accuracy_index, :])
+    # objs = problem.evaluate(res.X[max_accuracy_index, :])
+    # logging.info("Objs : {}".format(objs))
+    # converted_sol = convert_chromosomes([solution])
+    # accs, prediction_flips = distill_codet5(converted_sol, eval=False, surrogate=False, seed=seed)
+    # accs, prediction_flips = distill_codet5(converted_sol, eval=True, surrogate=False, seed=seed)
+    # logging.info("Prediction flips : {}".format(res.F[closest_index, 3]))
+
+    # Find solution with lowest third objective and second objective higher than 0.3
+    closest_index = np.argmin(res.F[:, 2])
+    while -res.F[closest_index, 1] < 0.3:
+        res.F = np.delete(res.F, closest_index, axis=0)
+        res.X = np.delete(res.X, closest_index, axis=0)
+        if len(res.F) == 0:
+            logging.info("No solutions found with second objective higher than 0.3")
+            return
+        closest_index = np.argmin(res.F[:, 2])
+    logging.info("Closest index: {}".format(closest_index))
+    logging.info("Closest solution: {}".format(res.X[closest_index, :]))
+    logging.info("Closest solution objectives: {}".format(res.F[closest_index, :]))
+    closest_solution = res.X[closest_index, :]
+
+    objs = problem.evaluate(closest_solution)
     logging.info("Objs : {}".format(objs))
-    converted_sol = convert_chromosomes([solution])
-    accs, prediction_flips = distill_codet5(converted_sol, eval=False, surrogate=False, seed=seed)
-    accs, prediction_flips = distill_codet5(converted_sol, eval=True, surrogate=False, seed=seed)
-    logging.info("Prediction flips : {}".format(res.F[closest_index, 3]))
+    converted_sol = convert_chromosomes([closest_solution])
+    accs, size = distill_codet5(converted_sol, eval=False, surrogate=False, seed=seed)
+    accs, size = distill_codet5(converted_sol, eval=True, surrogate=False, seed=seed)
 
     # results_file = "results_morph.csv"
     # with open(results_file, 'a', newline='') as file:
