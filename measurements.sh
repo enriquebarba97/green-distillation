@@ -20,7 +20,7 @@ declare -A COUNTS
 for ((i = 0; i < VALUES; i++)); do
     #mkdir -p "energy/model-$i/training"
     #mkdir -p "energy/model-$i/evaluation"
-    mkdir -p "energy/${NAME}/model-$i/training"
+    mkdir -p "energy/${NAME}/model-$i/evaluation"
 done
 
 # Initialize all counts to 0
