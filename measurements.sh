@@ -5,13 +5,22 @@ VALUES=80
 # Number of repetitions for each value
 REPETITIONS=30
 
+# Name of experiment and path
+#NAME="CodeT5_Summarization"
+#PATH="CodeT5+/Summarization"
+
+NAME="GCB-Vulnerability-Detection"
+PATH="GraphCodeBERT/Vulnerability-Detection/Morph"
+
+
 # Initialize an associative array to track counts
 declare -A COUNTS
 
 # Create directories for storing results for each value
 for ((i = 0; i < VALUES; i++)); do
     #mkdir -p "energy/model-$i/training"
-    mkdir -p "energy/model-$i/evaluation"
+    #mkdir -p "energy/model-$i/evaluation"
+    mkdir -p "energy/${NAME}/model-$i/training"
 done
 
 # Initialize all counts to 0
@@ -59,7 +68,7 @@ while true; do
     #CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/model-${RANDOM_VALUE}/training/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/Morph morph_env /bin/bash -c 'cd /root/Morph/CodeBERT/Clone-Detection/Morph/; python3 train_energy_test.py --model $RANDOM_VALUE'"
     #eval $CMD
     #sleep 60
-    CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/model-${RANDOM_VALUE}/evaluation/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/green green_env /bin/bash -c 'cd /root/green/CodeT5+/Summarization/; python3 evaluation_energy_test.py --model $RANDOM_VALUE'"
+    CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/model-${RANDOM_VALUE}/evaluation/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/green green_env /bin/bash -c 'cd /root/green/${PATH}; python3 evaluation_energy_test.py --model $RANDOM_VALUE'"
     eval $CMD
     sleep 30
 
