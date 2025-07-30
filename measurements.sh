@@ -1,6 +1,6 @@
 #!/bin/bash
 # Number of possible values
-VALUES=80
+VALUES=50
 
 # Number of repetitions for each value
 REPETITIONS=30
@@ -68,7 +68,7 @@ while true; do
     #CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/model-${RANDOM_VALUE}/training/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/Morph morph_env /bin/bash -c 'cd /root/Morph/CodeBERT/Clone-Detection/Morph/; python3 train_energy_test.py --model $RANDOM_VALUE'"
     #eval $CMD
     #sleep 60
-    CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/model-${RANDOM_VALUE}/evaluation/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/green green_env /bin/bash -c 'cd /root/green/${TASK_PATH}; python3 evaluation_energy_test.py --model $RANDOM_VALUE'"
+    CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/${NAME}/model-${RANDOM_VALUE}/evaluation/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/green green_env /bin/bash -c 'cd /root/green/${TASK_PATH}; python3 evaluation_energy_test.py --model $RANDOM_VALUE'"
     eval $CMD
     sleep 30
 
