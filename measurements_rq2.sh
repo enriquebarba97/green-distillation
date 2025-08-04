@@ -67,7 +67,6 @@ while true; do
     REAL_VALUE=$RANDOM_VALUE
 
     if [[ $RANDOM_VALUE -ge $VALUES ]]; then
-        echo "Using FLOPs optimization for value: $RANDOM_VALUE"
         USE_FLOPS="--use-flops"
         OP_ROUTE="flops-op"
         REAL_VALUE=$(($RANDOM_VALUE - $VALUES))
@@ -83,6 +82,6 @@ while true; do
     #sleep 60
     CMD="/home/enrique/EnergiBridge/target/release/energibridge --gpu -o energy/${NAME}/${OP_ROUTE}/model-${REAL_VALUE}/evaluation/${COUNT}.csv docker run -a stdout --gpus all --rm -v $(pwd):/root/green green_env /bin/bash -c 'cd /root/green/${TASK_PATH}; python3 evaluation_energy_test.py --model $REAL_VALUE $USE_FLOPS'"
     eval $CMD
-    sleep 1
+    sleep 30
 
 done
