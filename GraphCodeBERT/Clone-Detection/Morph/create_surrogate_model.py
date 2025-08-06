@@ -17,9 +17,20 @@ if __name__ == "__main__":
     problem = ModelCompressionProblem(lb, ub, None)
     sampler = LatinHypercubeSampler()
 
-    surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
+    # surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
 
-    print("Create surrogate models")
+    sampling_file = "surrogate_data_sampling.csv"
+
+    # Convert rows into array. Parse data types. Float if it contains a dot, otherwise int.
+    with open(sampling_file, "r") as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        surrogate_data = []
+        for row in reader:
+            # Convert each value to float if it contains a dot, otherwise to int
+            converted_row = [float(value) if '.' in value else int(value) for value in row]
+            surrogate_data.append(converted_row)
+        
 
     print("Create surrogate models")
 
