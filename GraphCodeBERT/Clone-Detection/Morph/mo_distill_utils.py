@@ -20,7 +20,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 logger = logging.getLogger(__name__)
 
 
-def train(model, train_dataloader, eval_dataloader, meta_dataloader, epochs, learning_rate, device, surrogate=False, model_name='model.bin'):
+def train(model, train_dataloader, eval_dataloader, meta_dataloader, epochs, learning_rate, device, surrogate=False, model_name='model.bin', use_flops=False):
     num_steps = len(train_dataloader) * epochs
     no_decay = ["bias", "LayerNorm.weight"]
     total_params = sum(p.numel() for p in model.parameters())
@@ -80,7 +80,8 @@ def train(model, train_dataloader, eval_dataloader, meta_dataloader, epochs, lea
             best_pred = predictions
 
             if not surrogate:
-                output_dir = os.path.join("../checkpoints", "Morph")
+                folder = "flops" if use_flops else "energy"
+                output_dir = os.path.join("../checkpoints", "Morph", "final", folder)
             else:
                 output_dir = os.path.join("/scratch/ebarbaroque/green-distillation/GraphCodeBERT/Clone-Detection/checkpoints", "Morph", "surrogate")
             os.makedirs(output_dir, exist_ok=True)
@@ -168,7 +169,7 @@ def initialize_weights(model):
             if hasattr(module, 'bias') and module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
 
-def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin', seed=1):
+def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin', seed=1, eval_rounds=1, use_flops=False):
     data_file = "data.jsonl"
     metamorphic_file = "metamorphic_data_new.jsonl"
     train_data_file = "../data/unlabel_train.txt"
@@ -245,7 +246,13 @@ def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin',
             meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
             prediction_flips.append(np.sum(pred_original != pred_metamorphic))
         else:
-            model_dir = os.path.join("../checkpoints", "Morph", model_name)
+            folder = "flops" if use_flops else "energy"
+
+            if surrogate:
+                model_dir = os.path.join("../checkpoints", "Morph", "surrogate", model_name)
+            else:
+                model_dir = os.path.join("../checkpoints", "Morph", "final", folder, model_name)
+
             model.load_state_dict(torch.load(model_dir, map_location=device))
             model.to(device)
 
@@ -255,7 +262,8 @@ def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin',
             test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=batch_size * 2, num_workers=8,
                                          pin_memory=True)
 
-            test_results, prediction = evaluate(model, device, test_dataloader)
+            for _ in range(eval_rounds):
+                test_results, prediction = evaluate(model, device, test_dataloader)
 
             meta_test_dataset = DistilledDataset(tokenizer_type, vocab_size, test_data_file, max_sequence_length,
                                                  logger,
@@ -264,7 +272,8 @@ def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin',
             meta_test_dataloader = DataLoader(meta_test_dataset, sampler=meta_test_sampler, batch_size=batch_size * 2,
                                               num_workers=8,
                                               pin_memory=True)
-            meta_results, pred_metamorphic = evaluate(model, device, meta_test_dataloader)
+            for _ in range(eval_rounds):
+                meta_results, pred_metamorphic = evaluate(model, device, meta_test_dataloader)
             logger.info(
                 "Test Acc: {0}, Test Precision: {1}, Test Recall: {2}, Test F1: {3}".format(test_results["eval_acc"],
                                                                                             test_results[
@@ -289,15 +298,15 @@ def hyperparams_convert(hyperparams):
 
     return [
         tokenizer_type[hyperparams[0]],
-        hyperparams[1],
-        hyperparams[2],
-        hyperparams[3],
+        int(hyperparams[1]),
+        int(hyperparams[2]),
+        int(hyperparams[3]),
         hidden_act[hyperparams[4]],
         hyperparams[5],
-        hyperparams[6],
-        hyperparams[7],
+        int(hyperparams[6]),
+        int(hyperparams[7]),
         hyperparams[8],
-        hyperparams[9],
+        int(hyperparams[9]),
         position_embedding_type[hyperparams[10]],
         learning_rate[hyperparams[11]],
         batch_size[hyperparams[12]]
