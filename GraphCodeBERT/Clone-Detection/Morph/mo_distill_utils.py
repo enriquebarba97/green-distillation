@@ -190,7 +190,7 @@ def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin',
         tokenizer_type, vocab_size, num_hidden_layers, hidden_size, hidden_act, hidden_dropout_prob, intermediate_size, num_attention_heads, attention_probs_dropout_prob, max_sequence_length, position_embedding_type, learning_rate, batch_size = hyperparams_convert(
             hyperparams)
 
-        config = RobertaConfig.from_pretrained("/scratch/ebarbaroque/green-distillation/GraphCodeBERT/codebert-base/")
+        config = RobertaConfig.from_pretrained("microsoft/codebert-base")
         config.num_labels = n_labels
         config.vocab_size = vocab_size
         config.num_hidden_layers = num_hidden_layers
