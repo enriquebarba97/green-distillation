@@ -238,7 +238,7 @@ def distill(hyperparams_set, eval=False, surrogate=True, model_name='model.bin',
             model.to(device)
 
             dev_best_acc, pred_original = train(model, train_dataloader, eval_dataloader, eval_dataloader2, epochs,
-                                                learning_rate, device, surrogate, model_name=model_name)
+                                                learning_rate, device, surrogate, model_name=model_name, use_flops=use_flops)
             dev_best_accs.append(dev_best_acc)
 
             # make prediction on metamorphic data

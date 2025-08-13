@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import random
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -100,10 +101,11 @@ def convert_chromosomes(population):
 
 class ModelCompressionProblem(Problem):
 
-    def __init__(self, lower_bounds, upper_bounds, surrogate_model: SurrogateModel):
+    def __init__(self, lower_bounds, upper_bounds, surrogate_model: SurrogateModel, use_flops=False):
         super().__init__(n_var=len(lower_bounds), n_obj=4, n_ieq_constr=0, xl=lower_bounds, xu=upper_bounds)
         self.generation = 0
         self.surrogate_model = surrogate_model
+        self.use_flops = use_flops
 
     def _evaluate(self, population, out, *args, **kwargs):
         # Initialize an array to hold the objective values for each solution in X
@@ -120,11 +122,17 @@ class ModelCompressionProblem(Problem):
                 model = TransformerHparams(candidate_values[3], candidate_values[2], candidate_values[9],
                                            candidate_values[1], candidate_values[6], candidate_values[7])
                 size = abs(model.get_params() * 4 / 1e6 - 0)
-                flops = model.get_infer_flops() / 1e9
                 accuracy = self.surrogate_model.predict_accuracy([candidate_values])[0]
                 n_flips = self.surrogate_model.predict_number_of_flip([candidate_values])[0]
 
-                F[idx, :] = [size, -accuracy, n_flips, flops]
+                if self.use_flops:
+                    consumption = model.get_infer_flops() / 1e9
+                else:
+                    gpu_energy = self.surrogate_model.predict_gpu_energy([candidate_values])[0]
+                    cpu_energy = self.surrogate_model.predict_cpu_energy([candidate_values])[0]
+                    consumption = gpu_energy + cpu_energy
+
+                F[idx, :] = [size, -accuracy, n_flips, consumption]
 
                 # Write data for each individual immediately after evaluation
                 writer.writerow([self.generation, candidate_values.tolist(), F[idx, 0], F[idx, 1], F[idx, 2]])
@@ -195,6 +203,11 @@ class MyRepair(Repair):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train and evaluate MORPH models.")
+    parser.add_argument("--model-name", type=str, default="model.bin", help="Name for final model weights.")
+    parser.add_argument("--use-flops", action='store_true', help="Use FLOPS instead of energy for surrogate modeling.")
+    args = parser.parse_args()
+
     start_time = time.time()
     lb = [1, 1000, 1, 16, 1, 0.2, 32, 1, 0.2, 256, 1, 2, 1]
     ub = [4, 46000, 12, 256, 4, 0.5, 3072, 12, 0.5, 512, 3, 3, 2]
@@ -213,22 +226,24 @@ if __name__ == "__main__":
     #surrogate_model = predictor([surrogate_data, accs])
     #dump(surrogate_model, 'bayesian_ridge_model.joblib')
     # Read the CSV file into a DataFrame
-    df = pd.read_csv("surrogate_data_metamorphic.csv")
+    df = pd.read_csv("surrogate_data_metamorphic_energy_CD.csv")
 
     # Apply the conversion function to each row, excluding the last column
     df.iloc[:, :-2] = df.iloc[:, :-2].apply(lambda row: hyperparams_convert_back(row.tolist()), axis=1,
                                             result_type='expand')
-    features = df.iloc[:, :-2].values
+    features = df.iloc[:, :-11].values
     accs = df['Accuracy'].tolist()
-    features2 = df.iloc[:, -1].values
+    #features2 = df.iloc[:, -1].values
     flips = df['Prediction Flips'].tolist()
+    gpu_energy = df['evaluation_median_gpu_energy'].tolist()
+    cpu_energy = df['evaluation_median_cpu_energy'].tolist()
 
     surrogate_model = SurrogateModel()
-    surrogate_model.fit([features, accs, flips])
+    surrogate_model.fit([features, accs, flips, gpu_energy, cpu_energy])
 
     logging.info("Time taken to train the surrogate model: {}".format(time.time() - start_time))
 
-    problem = ModelCompressionProblem(lb, ub, surrogate_model)
+    problem = ModelCompressionProblem(lb, ub, surrogate_model, use_flops=args.use_flops)
 
     for seed in range(0, 1):
         # set the seed for replicability
@@ -275,8 +290,17 @@ if __name__ == "__main__":
         objs = problem.evaluate(res.X[closest_index, :])
         logging.info("Objs : {}".format(objs))
         converted_sol = convert_chromosomes([closest_solution])
-        accs, prediction_flips = distill(converted_sol, eval=False, surrogate=False, model_name='mo_model.bin', seed=seed)
-        accs, prediction_flips = distill(converted_sol, eval=True, surrogate=False, model_name='mo_model.bin', seed=seed)
+
+        model = TransformerHparams(closest_solution[3], closest_solution[2], closest_solution[9],
+            closest_solution[1], closest_solution[6], closest_solution[7])
+    
+        flops = model.get_infer_flops() / 1e9
+        gpu_energy = surrogate_model.predict_gpu_energy([closest_solution])[0]
+        cpu_energy = surrogate_model.predict_cpu_energy([closest_solution])[0]
+        consumption = gpu_energy + cpu_energy
+
+        accs, prediction_flips = distill(converted_sol, eval=False, surrogate=False, model_name=args.model_name, seed=seed, use_flops=args.use_flops)
+        accs, prediction_flips = distill(converted_sol, eval=True, surrogate=False, model_name=args.model_name, seed=seed, use_flops=args.use_flops)
         logging.info("Prediction flips : {}".format(prediction_flips))
 
         logging.info("Time taken to train the model: {}".format(time.time() - start_time))
@@ -285,7 +309,7 @@ if __name__ == "__main__":
         fieldnames = [
             "Tokenizer", "Vocab Size", "Num Hidden Layers", "Hidden Size", "Hidden Act", "Hidden Dropout Prob",
             "Intermediate Size", "Num Attention Heads", "Attention Probs Dropout Prob", "Max Sequence Length",
-            "Position Embedding Type", "Learning Rate", "Batch Size", "Size", "Accuracy", "FLOPS", "Flips"
+            "Position Embedding Type", "Learning Rate", "Batch Size", "Size", "Accuracy", "FLOPS", "Consumption", "Flips"
         ]
 
         results_file = "morph_results.csv"
@@ -312,7 +336,8 @@ if __name__ == "__main__":
                 "Batch Size": converted_sol[0][12],
                 "Size": objs[0],  # Assuming objs[0] is the Size
                 "Accuracy": accs[0],  # Assuming accs contains accuracy values
-                "FLOPS": objs[3],  # Assuming objs[3] is the FLOPS
+                "FLOPS": flops,
+                "Consumption": consumption,
                 "Flips": prediction_flips[0]  # Assuming prediction_flips contains the flips value
             }
 
@@ -321,27 +346,27 @@ if __name__ == "__main__":
 
         # Open the file in append mode and write the data
         # Define the results file
-        results_file = "mo_pareto_fronts.csv"
+        # results_file = "mo_pareto_fronts.csv"
 
-        # Check if the file exists
-        file_exists = os.path.isfile(results_file)
+        # # Check if the file exists
+        # file_exists = os.path.isfile(results_file)
 
-        # Write the header if the file does not exist
-        with open(results_file, "a", newline='') as f:
-            writer = csv.writer(f)
-            # Write the header if the file does not exist
-            if not file_exists:
-                writer.writerow([
-                    "Seed", "Algorithm", "Model Size", "Accuracy", "FLOPs", "Prediction Flips"
-                ])
+        # # Write the header if the file does not exist
+        # with open(results_file, "a", newline='') as f:
+        #     writer = csv.writer(f)
+        #     # Write the header if the file does not exist
+        #     if not file_exists:
+        #         writer.writerow([
+        #             "Seed", "Algorithm", "Model Size", "Accuracy", "FLOPs", "Prediction Flips"
+        #         ])
 
-            for index in range(0, len(res.F)):
-                row_data = [
-                    seed,
-                    "AGEMOEA",  # Ensure NSGA3 is saved as a string
-                    res.F[index, 0],
-                    -res.F[index, 1],
-                    res.F[index, 2],
-                    res.F[index, 3]
-                ]
-                writer.writerow(row_data)
+        #     for index in range(0, len(res.F)):
+        #         row_data = [
+        #             seed,
+        #             "AGEMOEA",  # Ensure NSGA3 is saved as a string
+        #             res.F[index, 0],
+        #             -res.F[index, 1],
+        #             res.F[index, 2],
+        #             res.F[index, 3]
+        #         ]
+        #         writer.writerow(row_data)
