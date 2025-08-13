@@ -1,4 +1,4 @@
-Tokenizer,Vocab Size,Num Hidden Layers,Hidden Size,Hidden Act,Hidden Dropout Prob,Intermediate Size,Num Attention Heads,Attention Probs Dropout Prob,Max Sequence Length,Position Embedding Type,Learning Rate,Batch Size,Size,Accuracy,FLOPS,Cons>
+Tokenizer,Vocab Size,Num Hidden Layers,Hidden Size,Hidden Act,Hidden Dropout Prob,Intermediate Size,Num Attention Heads,Attention Probs Dropout Prob,Max Sequence Length,Position Embedding Type,Learning Rate,Batch Size,Size,Accuracy,FLOPS,Consumption,Flips
 2,7167,1,54,3,0.3,1675,6,0.3,308,2,2,1,2.485258019650663,0.965,0.875029763963818,9739,45
 3,8134,1,54,1,0.3,1639,9,0.3,308,2,3,1,2.6812333198134293,0.94125,0.9467496658239166,13452,46
 4,1000,1,54,2,0.2,1959,9,0.2,308,2,2,1,1.2786413185982721,0.96825,0.5161308698218416,15265,26
