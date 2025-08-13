@@ -312,7 +312,8 @@ if __name__ == "__main__":
             "Position Embedding Type", "Learning Rate", "Batch Size", "Size", "Accuracy", "FLOPS", "Consumption", "Flips"
         ]
 
-        results_file = "morph_results.csv"
+        suffix = "flops" if args.use_flops else "energy"
+        results_file = f"morph_results_{suffix}.csv"
         with open(results_file, 'a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             # Write the header only if the file is empty
