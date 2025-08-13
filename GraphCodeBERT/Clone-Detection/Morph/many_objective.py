@@ -229,7 +229,7 @@ if __name__ == "__main__":
     df = pd.read_csv("surrogate_data_metamorphic_energy_CD.csv")
 
     # Apply the conversion function to each row, excluding the last column
-    df.iloc[:, :-2] = df.iloc[:, :-2].apply(lambda row: hyperparams_convert_back(row.tolist()), axis=1,
+    df.iloc[:, :-11] = df.iloc[:, :-11].apply(lambda row: hyperparams_convert_back(row.tolist()), axis=1,
                                             result_type='expand')
     features = df.iloc[:, :-11].values
     accs = df['Accuracy'].tolist()
