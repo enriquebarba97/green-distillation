@@ -307,7 +307,7 @@ if __name__ == "__main__":
                     -res.F[index, 1],
                     flops,
                     consumption,
-                    res.F[index, 3]
+                    res.F[index, 2]
                 ]
 
                 print("Row data: ", row_data)
