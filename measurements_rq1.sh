@@ -10,7 +10,7 @@ REPETITIONS=20
 #TASK_PATH="CodeT5+/Summarization"
 
 NAME="GCB-Vulnerability-Detection-RQ1"
-TASK_PATH="GraphCodeBERT/GCB-Vulnerability-Detection/Morph"
+TASK_PATH="GraphCodeBERT/Vulnerability-Detection/Morph"
 
 
 # Initialize an associative array to track counts
