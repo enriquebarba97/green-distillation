@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # surrogate_data = convert_chromosomes(sampler._do(problem, n_points))
 
-    sampling_file = "surrogate_data_sampling.csv"
+    sampling_file = "surrogate_data_sampling_NEW.csv"
 
     # Convert rows into array. Parse data types. Float if it contains a dot, otherwise int.
     with open(sampling_file, "r") as f:
@@ -39,7 +39,7 @@ if __name__ == "__main__":
                   "Position Embedding Type", "Learning Rate", "Batch Size", "Model Size", "Accuracy",
                   "Prediction Flips"]
 
-    results_file = "surrogate_data_metamorphic.csv"
+    results_file = "surrogate_data_metamorphic_NEW.csv"
 
     # Write the header only if the file is empty
     with open(results_file, 'a', newline='') as file:
