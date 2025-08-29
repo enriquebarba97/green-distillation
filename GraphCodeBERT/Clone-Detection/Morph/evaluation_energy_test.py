@@ -57,7 +57,7 @@ def main():
 
 
     eval_rounds = 6
-    accs, _ = distill([hyperparams], eval=True, surrogate=False, seed=seed, model_name=model_name, eval_rounds=eval_rounds, use_flops=args.use_flops)
+    accs, _ = distill([hyperparams], eval=True, surrogate=args.surrogate, seed=seed, model_name=model_name, eval_rounds=eval_rounds, use_flops=args.use_flops)
 
     print(accs)
 
