@@ -29,7 +29,7 @@ def main():
         hyperparams_data = pd.read_csv('surrogate_data_metamorphic_NEW.csv').to_numpy()
         num_objs = 3
     # Load Pareto front data and convert to array
-    if args.pareto:
+    elif args.pareto:
         hyperparams_data = pd.read_csv('mo_pareto_front_rq1.csv').to_numpy()
         num_objs = 5
     elif args.use_flops:
