@@ -1,8 +1,8 @@
 #!/bin/bash
 MODELS=20
 
-NAME="GCB-Vulnerability-Detection"
-TASK_PATH="GraphCodeBERT/Vulnerability-Detection/Morph"
+NAME="GCB-Clone-Detection"
+TASK_PATH="GraphCodeBERT/Clone-Detection/Morph"
 
 # Trap sigint, stop docker and break the loop
 function cleanup {

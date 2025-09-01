@@ -277,41 +277,41 @@ if __name__ == "__main__":
 
         # Open the file in append mode and write the data
         # Define the results file
-        results_file = "mo_pareto_front.csv"
+        # results_file = "mo_pareto_front.csv"
 
-        # Write the header if the file does not exist
-        with open(results_file, "a", newline='') as f:
-            writer = csv.writer(f)
-            # Write the header if the file does not exist
-            if f.tell() == 0:
-                writer.writerow([
-                    "Tokenizer", "Vocab Size", "Num Hidden Layers", "Hidden Size", "Hidden Act", "Hidden Dropout Prob",
-                    "Intermediate Size", "Num Attention Heads", "Attention Probs Dropout Prob", "Max Sequence Length",
-                    "Position Embedding Type", "Learning Rate", "Batch Size", "Model Size", "Accuracy", "FLOPs", "Consumption", "Prediction Flips"
-                ])
+        # # Write the header if the file does not exist
+        # with open(results_file, "a", newline='') as f:
+        #     writer = csv.writer(f)
+        #     # Write the header if the file does not exist
+        #     if f.tell() == 0:
+        #         writer.writerow([
+        #             "Tokenizer", "Vocab Size", "Num Hidden Layers", "Hidden Size", "Hidden Act", "Hidden Dropout Prob",
+        #             "Intermediate Size", "Num Attention Heads", "Attention Probs Dropout Prob", "Max Sequence Length",
+        #             "Position Embedding Type", "Learning Rate", "Batch Size", "Model Size", "Accuracy", "FLOPs", "Consumption", "Prediction Flips"
+        #         ])
             
-            converted_solutions = convert_chromosomes(res.X)
+        #     converted_solutions = convert_chromosomes(res.X)
 
-            for index in range(0, len(res.F)):
-                row_data = converted_solutions[index]
-                model = TransformerHparams(row_data[3], row_data[2], row_data[9],
-                                           row_data[1], row_data[6], row_data[7])
-                flops = model.get_infer_flops() / 1e9
-                gpu_energy = surrogate_model.predict_gpu_energy([row_data])[0]
-                cpu_energy = surrogate_model.predict_cpu_energy([row_data])[0]
-                consumption = gpu_energy + cpu_energy
+        #     for index in range(0, len(res.F)):
+        #         row_data = converted_solutions[index]
+        #         model = TransformerHparams(row_data[3], row_data[2], row_data[9],
+        #                                    row_data[1], row_data[6], row_data[7])
+        #         flops = model.get_infer_flops() / 1e9
+        #         gpu_energy = surrogate_model.predict_gpu_energy([row_data])[0]
+        #         cpu_energy = surrogate_model.predict_cpu_energy([row_data])[0]
+        #         consumption = gpu_energy + cpu_energy
                 
 
-                row_data += [
-                    res.F[index, 0],
-                    -res.F[index, 1],
-                    flops,
-                    consumption,
-                    res.F[index, 2]
-                ]
+        #         row_data += [
+        #             res.F[index, 0],
+        #             -res.F[index, 1],
+        #             flops,
+        #             consumption,
+        #             res.F[index, 2]
+        #         ]
 
-                print("Row data: ", row_data)
-                writer.writerow(row_data)
+        #         print("Row data: ", row_data)
+        #         writer.writerow(row_data)
 
         # Extract the first objective
         first_objective = res.F[:, 0]
