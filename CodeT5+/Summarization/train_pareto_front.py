@@ -8,11 +8,13 @@ import argparse
 from mo_distill_utils import distill, hyperparams_convert
 
 def main():
-    #parser = argparse.ArgumentParser(description="Train MORPH models from Pareto front.")
+    parser = argparse.ArgumentParser(description="Train MORPH models from Pareto front.")
     #parser.add_argument("--model", type=int, default=0,
-    #                    help="Model index to train from the Pareto front.")
-    
-    #args = parser.parse_args()
+        #               help="Model index to train from the Pareto front.")
+    parser.add_argument("--start", type=int, help="Starting index for training.")
+    parser.add_argument("--end", type=int, help="Ending index for training.")
+
+    args = parser.parse_args()
 
     seed = 2
 
@@ -27,7 +29,7 @@ def main():
             "Position Embedding Type", "Learning Rate", "Batch Size", "Size", "Accuracy", "FLOPS", "Flips", "Training Time", "Evaluation Time"
     ]
 
-    for i in range(pareto_front.shape[0]):
+    for i in range(args.start, args.end):
         hyperparams = pareto_front[i, :pareto_front.shape[1] - 3]
         objectives = pareto_front[i, pareto_front.shape[1] - 3:]
 
