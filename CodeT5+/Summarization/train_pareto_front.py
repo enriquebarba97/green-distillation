@@ -38,13 +38,13 @@ def main():
         logging.info(f"Training {i} with Consumption {objectives[2]} and size {objectives[0]}")
         if i != 0:
             start_time = time.time()
-            accs, prediction_flips = distill_codet5([hyperparams], eval=False, surrogate=False, seed=seed, weights_file=f"pareto_{i}.bin")
+            accs, prediction_flips = distill_codet5([hyperparams], eval=False, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
             training_time = time.time()-start_time
             logging.info(f"Training took: {training_time} seconds")
         else:
             training_time = 0.0
         start_time = time.time()
-        accs, prediction_flips = distill_codet5([hyperparams], eval=True, surrogate=False, seed=seed, weights_file=f"pareto_{i}.bin")
+        accs, prediction_flips = distill_codet5([hyperparams], eval=True, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
         evaluation_time = time.time()-start_time
         logging.info(f"Evaluation took: {evaluation_time} seconds")
 
