@@ -5,7 +5,7 @@ import csv
 import time
 import argparse
 
-from mo_distill_utils import distill, hyperparams_convert
+from mo_distill_utils import distill_codet5, hyperparams_convert
 
 def main():
     parser = argparse.ArgumentParser(description="Train MORPH models from Pareto front.")
@@ -36,11 +36,11 @@ def main():
 
         logging.info(f"Training {i} with Consumption {objectives[2]} and size {objectives[0]}")
         start_time = time.time()
-        accs, prediction_flips = distill([hyperparams], eval=False, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
+        accs, prediction_flips = distill_codet5([hyperparams], eval=False, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
         training_time = time.time()-start_time
         logging.info(f"Training took: {training_time} seconds")
         start_time = time.time()
-        accs, prediction_flips = distill([hyperparams], eval=True, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
+        accs, prediction_flips = distill_codet5([hyperparams], eval=True, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
         evaluation_time = time.time()-start_time
         logging.info(f"Evaluation took: {evaluation_time} seconds")
 
