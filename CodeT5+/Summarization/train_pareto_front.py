@@ -13,6 +13,7 @@ def main():
         #               help="Model index to train from the Pareto front.")
     parser.add_argument("--start", type=int, help="Starting index for training.")
     parser.add_argument("--end", type=int, help="Ending index for training.")
+    parser.add_argument("--segment", type=int, help="Results file suffix for parallel execution in HPC.")
 
     args = parser.parse_args()
 
@@ -22,12 +23,12 @@ def main():
     pareto_front = pareto_front.to_numpy()[:, :]
 
     # Final results file
-    results_file = 'pareto_front_training.csv'
-    fieldnames = [
-            "Tokenizer", "Vocab Size", "Num Hidden Layers", "Hidden Size", "Hidden Act", "Hidden Dropout Prob",
-            "Intermediate Size", "Num Attention Heads", "Attention Probs Dropout Prob", "Max Sequence Length",
-            "Position Embedding Type", "Learning Rate", "Batch Size", "Size", "Accuracy", "FLOPS", "Flips", "Training Time", "Evaluation Time"
-    ]
+    results_file = f'pareto_front_training-{args.segment}.csv'
+    fieldnames = [ "Num Hidden Layers", "Hidden Activation", "Number Decoder Layers", "Hidden Size", 
+                    "Num Attention Heads", "Projection Size", "Intermediate Size", "Relative Attention Buckets",
+                    "Relative Attention Max Distance", "Dropout Rate", "Feed Forward Projection",
+                    "Learning Rate", "Batch Size", "Model Size", "Rouge Score", "Consumption", "Training Time", "Evaluation Time"]
+
 
     for i in range(args.start, args.end):
         hyperparams = pareto_front[i, :pareto_front.shape[1] - 3]
@@ -35,12 +36,15 @@ def main():
 
 
         logging.info(f"Training {i} with Consumption {objectives[2]} and size {objectives[0]}")
+        if i != 0:
+            start_time = time.time()
+            accs, prediction_flips = distill_codet5([hyperparams], eval=False, surrogate=False, seed=seed, weights_file=f"pareto_{i}.bin")
+            training_time = time.time()-start_time
+            logging.info(f"Training took: {training_time} seconds")
+        else:
+            training_time = 0.0
         start_time = time.time()
-        accs, prediction_flips = distill_codet5([hyperparams], eval=False, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
-        training_time = time.time()-start_time
-        logging.info(f"Training took: {training_time} seconds")
-        start_time = time.time()
-        accs, prediction_flips = distill_codet5([hyperparams], eval=True, surrogate=False, seed=seed, model_name=f"pareto_{i}.bin")
+        accs, prediction_flips = distill_codet5([hyperparams], eval=True, surrogate=False, seed=seed, weights_file=f"pareto_{i}.bin")
         evaluation_time = time.time()-start_time
         logging.info(f"Evaluation took: {evaluation_time} seconds")
 
@@ -53,22 +57,22 @@ def main():
 
             # Create a dictionary from row data
             row_data = {
-                "Tokenizer": hyperparams[0],
-                "Vocab Size": hyperparams[1],
-                "Num Hidden Layers": hyperparams[2],
+                "Num Hidden Layers": hyperparams[0],
+                "Hidden Activation": hyperparams[1],
+                "Number Decoder Layers": hyperparams[2],
                 "Hidden Size": hyperparams[3],
-                "Hidden Act": hyperparams[4],
-                "Hidden Dropout Prob": hyperparams[5],
+                "Num Attention Heads": hyperparams[4],
+                "Projection Size": hyperparams[5],
                 "Intermediate Size": hyperparams[6],
-                "Num Attention Heads": hyperparams[7],
-                "Attention Probs Dropout Prob": hyperparams[8],
-                "Max Sequence Length": hyperparams[9],
-                "Position Embedding Type": hyperparams[10],
+                "Relative Attention Buckets": hyperparams[7],
+                "Relative Attention Max Distance": hyperparams[8],
+                "Dropout Rate": hyperparams[9],
+                "Feed Forward Projection": hyperparams[10],
                 "Learning Rate": hyperparams[11],
                 "Batch Size": hyperparams[12],
-                "Size": objectives[0],  # Assuming objs[0] is the Size
-                "Accuracy": accs[0],  # Assuming accs contains accuracy values
-                "Consumption": objectives[2],  # Assuming objs[3] is the FLOPS
+                "Model Size": objectives[0],  # Assuming objs[0] is the Size
+                "Rouge Score": accs[0],  # Assuming accs contains accuracy values
+                "Consumption": objectives[2],  # Assuming objs[2] is the FLOPS
                 "Training Time": training_time,
                 "Evaluation Time": evaluation_time
             }
