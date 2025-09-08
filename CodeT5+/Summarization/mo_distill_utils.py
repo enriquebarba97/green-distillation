@@ -197,7 +197,7 @@ def evaluate_old(model, device, eval_dataloader):
     }
     return results, preds
 
-def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_file="model.bin"):
+def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, model_name="model.bin"):
     data_file = "data.jsonl"
     metamorphic_file = "metamorphic_data_new.jsonl"
     train_data_file = "../data/unlabel_train.txt"
@@ -262,7 +262,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
             sizes.append(size)
 
             dev_best_rouge, pred_original = train_codet5(model, teacher_model, tokenizer, train_dataloader, eval_dataloader, epochs, learning_rate, device,
-                                                surrogate, weights_file=weights_file)
+                                                surrogate, weights_file=model_name)
             dev_best_rouges.append(dev_best_rouge)
             del model, teacher_model, train_dataloader, eval_dataloader, train_dataset, eval_dataset
             #eval_dataset2 = DistilledDataset(tokenizer_type, vocab_size, eval_data_file, max_sequence_length, logger,
@@ -274,7 +274,7 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, weights_
 #            meta_results, pred_metamorphic = evaluate(model, device, eval_dataloader2)
         else:
             input_dir = "surrogate" if surrogate else "final"
-            model_dir = os.path.join("../checkpoints", input_dir, weights_file)
+            model_dir = os.path.join("../checkpoints", input_dir, model_name)
             model.load_state_dict(torch.load(model_dir, map_location=device))
             model.to(device)
 

@@ -88,7 +88,7 @@ def main_codet5(start_from=0, end_at=80, single=False, generate_points=False):
 
     if single:
         
-        rouges, sizes = distill_codet5([surrogate_data[start_from]], eval=False, surrogate=True, weights_file=f"model-{start_from}.bin")
+        rouges, sizes = distill_codet5([surrogate_data[start_from]], eval=False, surrogate=True, model_name=f"model-{start_from}.bin")
 
         with open("surrogate_data_large.csv", "a") as f:
                 writer = csv.writer(f)
@@ -106,7 +106,7 @@ def main_codet5(start_from=0, end_at=80, single=False, generate_points=False):
         for i in range(start_from, end_at):
 
         # trains the models
-            rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, weights_file=f"model-{i}.bin")
+            rouges, sizes = distill_codet5([surrogate_data[i]], eval=False, surrogate=True, model_name=f"model-{i}.bin")
 
             with open("surrogate_data_large.csv", "a") as f:
                 writer = csv.writer(f)

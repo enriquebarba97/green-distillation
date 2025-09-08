@@ -30,7 +30,7 @@ def main():
 
     eval_rounds = 10
     for i in range(eval_rounds):
-        accs, _ = distill_codet5([hyperparams], eval=True, surrogate=True, seed=seed, weights_file=f"model-{model_number}.bin")
+        accs, _ = distill_codet5([hyperparams], eval=True, surrogate=True, seed=seed, model_name=f"model-{model_number}.bin")
 
     print(accs)
 
