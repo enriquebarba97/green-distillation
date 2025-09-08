@@ -226,6 +226,40 @@ class DistilledDataset(Dataset):
 class OnlineDistilledDataset(Dataset):
     def __init__(self, split, tokenizer, n_samples=1000, max_source_length=320, max_target_length=128, path=None):
 
+        if split == "test":
+            if path is not None and os.path.exists(path):
+                self.examples = load_from_disk(path)
+            else:
+                dataset = load_from_disk("../data/heap_summarization")
+                def preprocess_test(example):
+                    source = example["function_code"]
+                    target = example["docstring"]
+
+                    model_inputs = tokenizer(source, max_length=max_source_length, padding="max_length", truncation=True)
+                    labels = tokenizer(target, max_length=max_target_length, padding="max_length", truncation=True)
+
+                    model_inputs["labels"] = labels["input_ids"].copy()
+                    model_inputs["labels"] = [
+                        [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in model_inputs["labels"]
+                    ]
+
+                    return {
+                        "input_ids": model_inputs["input_ids"],
+                        "attention_mask": model_inputs["attention_mask"],
+                        "labels": model_inputs["labels"],
+                        "source_text": source,
+                        "target_text": target
+                    }
+                self.examples = dataset.map(
+                    preprocess_function,
+                    batched=True,
+                    remove_columns=dataset.column_names,
+                    num_proc=64,
+                    load_from_cache_file=False,
+                )
+
+                if path is not None:
+                    self.examples.save_to_disk(path)
 
         if path is not None and os.path.exists(path):
             self.examples = load_from_disk(path)
@@ -249,7 +283,6 @@ class OnlineDistilledDataset(Dataset):
                     "labels": model_inputs["labels"],
                     "source_text": source,
                     "target_text": target
-
                 }
                     
             self.examples = dataset.map(
