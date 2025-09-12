@@ -197,7 +197,7 @@ def evaluate_old(model, device, eval_dataloader):
     }
     return results, preds
 
-def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, model_name="model.bin"):
+def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, model_name="model.bin", eval_rounds=1):
     data_file = "data.jsonl"
     metamorphic_file = "metamorphic_data_new.jsonl"
     train_data_file = "../data/unlabel_train.txt"
@@ -283,7 +283,8 @@ def distill_codet5(hyperparams_set, eval=False, surrogate=True, seed=1, model_na
             test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=batch_size * 2, num_workers=8,
                                          pin_memory=True)
 
-            test_results = evaluate(model, device, test_dataloader, tokenizer)
+            for _ in range(eval_rounds):
+                test_results = evaluate(model, device, test_dataloader, tokenizer)
 
             print("Test Acc: {0}, Inference time: {1}".format(
                 test_results["rouge_l"],
@@ -329,15 +330,15 @@ def hyperparams_convert_codet5(hyperparams):
     batch_size = {1: 8, 2: 16}
 
     return [
-        hyperparams[0],
+        int(hyperparams[0]),
         hidden_act[hyperparams[1]],
-        hyperparams[2],
-        hyperparams[3],
-        hyperparams[4],
-        hyperparams[5],
-        hyperparams[6],
-        hyperparams[7],
-        hyperparams[8],
+        int(hyperparams[2]),
+        int(hyperparams[3]),
+        int(hyperparams[4]),
+        int(hyperparams[5]),
+        int(hyperparams[6]),
+        int(hyperparams[7]),
+        int(hyperparams[8]),
         hyperparams[9],
         feed_forward_proj[hyperparams[10]],
         learning_rate[hyperparams[11]],

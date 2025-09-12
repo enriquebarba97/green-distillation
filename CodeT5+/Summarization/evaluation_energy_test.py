@@ -11,28 +11,50 @@ def main():
     parser = argparse.ArgumentParser(description="Train and evaluate MORPH models.")
     parser.add_argument("--model", type=str, required=True,
                         help="Model to test energy performance.")
+    # parser.add_argument("--use-flops", action='store_true',
+    #                     help="Take models from FLOPs optimization instead of energy optimization.")
+    parser.add_argument("--pareto", action='store_true',
+                        help="Use Pareto front models for RQ1")
+    parser.add_argument("--surrogate", action='store_true',
+                        help="Measuring energy of surrogate models.")
     args = parser.parse_args()
 
     model_number = int(args.model)
 
     seed = 2
 
+    if args.surrogate:
+        # Load surrogate data
+        hyperparams_data = pd.read_csv('surrogate_data_metamorphic_NEW.csv').to_numpy()
+        num_objs = 3
     # Load Pareto front data and convert to array
-    hyperparams_data = pd.read_csv('surrogate_data_large.csv').to_numpy()
+    elif args.pareto:
+        hyperparams_data = pd.read_csv('mo_pareto_front_rq2.csv').to_numpy()
+        num_objs = 5
+    else:
+        hyperparams_data = pd.read_csv('morph_results_energy.csv').to_numpy()
+        num_objs = 5
 
-    hyperparameters = hyperparams_data[:, :hyperparams_data.shape[1] - 2]
-    objectives = hyperparams_data[:, hyperparams_data.shape[1] - 2:]
+    hyperparameters = hyperparams_data[:, :hyperparams_data.shape[1] - num_objs] # 2 for surrogate, 4 for final models
+    objectives = hyperparams_data[:, hyperparams_data.shape[1] - num_objs:]
 
-    hyperparameters = [hyperparams_convert_back_codet5(row) for row in hyperparameters]
+    if args.surrogate:
+        hyperparameters = [hyperparams_convert_back_codet5(row) for row in hyperparameters]
 
     hyperparams = hyperparameters[model_number]
     objs = objectives[model_number]
 
-    eval_rounds = 10
-    for i in range(eval_rounds):
-        accs, _ = distill_codet5([hyperparams], eval=True, surrogate=True, seed=seed, model_name=f"model-{model_number}.bin")
+    # RQ1: Pareto measurements
+    if args.pareto:
+        model_name = f"pareto_{model_number}.bin"
+    else:
+        # RQ2: Final models
+        model_name = f"model-{model_number}.bin"
+
+
+    eval_rounds = 2
+    accs, _ = distill_codet5([hyperparams], eval=True, surrogate=args.surrogate, seed=seed, model_name=model_name, eval_rounds=eval_rounds)
 
     print(accs)
-
 if __name__ == "__main__":
     main()

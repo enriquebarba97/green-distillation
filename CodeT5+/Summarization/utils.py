@@ -229,6 +229,7 @@ class OnlineDistilledDataset(Dataset):
         if split == "test":
             if path is not None and os.path.exists(path):
                 self.examples = load_from_disk(path)
+                self.examples = self.examples.select(range(n_samples))
             else:
                 dataset = load_from_disk("../data/heap_summarization")
                 def preprocess_test(example):
@@ -257,11 +258,12 @@ class OnlineDistilledDataset(Dataset):
                     num_proc=64,
                     load_from_cache_file=False,
                 )
+                self.examples = self.examples.select(range(n_samples))
 
                 if path is not None:
                     self.examples.save_to_disk(path)
 
-        if path is not None and os.path.exists(path):
+        elif path is not None and os.path.exists(path):
             self.examples = load_from_disk(path)
         else:
             dataset = load_dataset("code_x_glue_ct_code_to_text", 'python', split=f"{split}[:{n_samples}]")
